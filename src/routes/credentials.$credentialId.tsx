@@ -18,6 +18,7 @@ import {
 } from "@/components/pm/primitives";
 import { Container, PageHeader } from "@/components/pm/site";
 import { CredentialFields, formatDate } from "@/components/pm/verification";
+import { RevokeAction } from "@/components/pm/web3";
 import { fetchCredential } from "@/lib/credentials.functions";
 import { SEPOLIA } from "@/lib/proofmesh";
 
@@ -112,6 +113,11 @@ function CredentialDetailPage() {
               <Panel>
                 <PanelHeader title="Credential" aside={<StatusBadge status={credential.status} />} />
                 <CredentialFields credential={credential} />
+                {credential.status === "ACTIVE" ? (
+                  <div className="border-t border-border p-4 sm:p-5">
+                    <RevokeAction credentialId={credential.credentialId} issuerWallet={credential.issuerWallet} />
+                  </div>
+                ) : null}
                 <dl>
                   <DataRow label="Record created">{formatDate(credential.createdAt)}</DataRow>
                   <DataRow label="Revoked at">{formatDate(credential.revokedAt)}</DataRow>
