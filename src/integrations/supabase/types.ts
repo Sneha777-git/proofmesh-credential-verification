@@ -14,16 +14,210 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      credentials: {
+        Row: {
+          block_number: number | null
+          created_at: string
+          credential_id: string
+          credential_type: Database["public"]["Enums"]["credential_type"]
+          document_hash: string
+          id: string
+          ipfs_cid: string | null
+          issued_at: string | null
+          issuer_wallet: string
+          revoked_at: string | null
+          status: Database["public"]["Enums"]["credential_status"]
+          transaction_hash: string | null
+          updated_at: string
+        }
+        Insert: {
+          block_number?: number | null
+          created_at?: string
+          credential_id: string
+          credential_type: Database["public"]["Enums"]["credential_type"]
+          document_hash: string
+          id?: string
+          ipfs_cid?: string | null
+          issued_at?: string | null
+          issuer_wallet: string
+          revoked_at?: string | null
+          status?: Database["public"]["Enums"]["credential_status"]
+          transaction_hash?: string | null
+          updated_at?: string
+        }
+        Update: {
+          block_number?: number | null
+          created_at?: string
+          credential_id?: string
+          credential_type?: Database["public"]["Enums"]["credential_type"]
+          document_hash?: string
+          id?: string
+          ipfs_cid?: string | null
+          issued_at?: string | null
+          issuer_wallet?: string
+          revoked_at?: string | null
+          status?: Database["public"]["Enums"]["credential_status"]
+          transaction_hash?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credentials_issuer_wallet_fkey"
+            columns: ["issuer_wallet"]
+            isOneToOne: false
+            referencedRelation: "issuers"
+            referencedColumns: ["wallet_address"]
+          },
+        ]
+      }
+      issuers: {
+        Row: {
+          authorization_status: Database["public"]["Enums"]["issuer_authorization"]
+          created_at: string
+          id: string
+          issuer_name: string
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          authorization_status?: Database["public"]["Enums"]["issuer_authorization"]
+          created_at?: string
+          id?: string
+          issuer_name: string
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          authorization_status?: Database["public"]["Enums"]["issuer_authorization"]
+          created_at?: string
+          id?: string
+          issuer_name?: string
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          wallet_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      verification_events: {
+        Row: {
+          created_at: string
+          credential_id: string
+          id: string
+          result: Database["public"]["Enums"]["verification_result"]
+          verification_type: Database["public"]["Enums"]["verification_type"]
+        }
+        Insert: {
+          created_at?: string
+          credential_id: string
+          id?: string
+          result: Database["public"]["Enums"]["verification_result"]
+          verification_type: Database["public"]["Enums"]["verification_type"]
+        }
+        Update: {
+          created_at?: string
+          credential_id?: string
+          id?: string
+          result?: Database["public"]["Enums"]["verification_result"]
+          verification_type?: Database["public"]["Enums"]["verification_type"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_authorized_issuer: {
+        Args: { _user_id: string; _wallet: string }
+        Returns: boolean
+      }
+      record_verification: {
+        Args: {
+          _credential_id: string
+          _type: Database["public"]["Enums"]["verification_type"]
+        }
+        Returns: Database["public"]["Enums"]["verification_result"]
+      }
+      verification_event_count: { Args: never; Returns: number }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "issuer" | "user"
+      credential_status: "ACTIVE" | "REVOKED" | "PENDING" | "ERROR"
+      credential_type:
+        | "Academic"
+        | "Internship"
+        | "Course"
+        | "Achievement"
+        | "Project"
+        | "Other"
+      issuer_authorization:
+        | "authorized"
+        | "unauthorized"
+        | "pending"
+        | "suspended"
+      verification_result:
+        | "record_found"
+        | "revoked"
+        | "pending"
+        | "error_state"
+        | "not_found"
+      verification_type: "credential_id" | "qr" | "document" | "public_link"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +344,31 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "issuer", "user"],
+      credential_status: ["ACTIVE", "REVOKED", "PENDING", "ERROR"],
+      credential_type: [
+        "Academic",
+        "Internship",
+        "Course",
+        "Achievement",
+        "Project",
+        "Other",
+      ],
+      issuer_authorization: [
+        "authorized",
+        "unauthorized",
+        "pending",
+        "suspended",
+      ],
+      verification_result: [
+        "record_found",
+        "revoked",
+        "pending",
+        "error_state",
+        "not_found",
+      ],
+      verification_type: ["credential_id", "qr", "document", "public_link"],
+    },
   },
 } as const
