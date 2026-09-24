@@ -1,12 +1,13 @@
 /**
  * ProofMesh domain types.
  *
- * Phase 1 is frontend-only: nothing here is populated with real or
- * real-looking data. These shapes exist so Phase 2 (Supabase, IPFS,
- * Ethereum Sepolia, n8n) can be wired in without restructuring the UI.
+ * Phase 2: these mirror the database record. A database record is application
+ * metadata only — it is NOT a blockchain proof. The on-chain proof (Phase 3)
+ * and the IPFS document are separate sources of truth.
  */
 
-export type CredentialStatus = "registered" | "revoked" | "pending" | "unknown";
+export type CredentialStatus = "ACTIVE" | "REVOKED" | "PENDING" | "ERROR";
+export const CREDENTIAL_STATUSES: CredentialStatus[] = ["ACTIVE", "REVOKED", "PENDING", "ERROR"];
 
 export type CredentialType =
   | "Academic"
@@ -25,50 +26,57 @@ export const CREDENTIAL_TYPES: CredentialType[] = [
   "Other",
 ];
 
+export type IssuerAuthorization = "authorized" | "unauthorized" | "pending" | "suspended";
+
 export interface Issuer {
-  /** Display name of the authorized issuing organization. */
-  name: string;
-  /** Public issuer wallet address. */
-  wallet: string;
-  verified: boolean;
+  walletAddress: string;
+  issuerName: string;
+  authorizationStatus: IssuerAuthorization;
 }
 
+/** Public credential record as stored in the database. No personal data. */
 export interface Credential {
   credentialId: string;
   credentialType: CredentialType;
-  issuer: Issuer;
   issuerWallet: string;
-  /** Non-sensitive recipient reference only. Never store identity documents. */
-  recipientReference: string;
+  issuer: Issuer | null;
   documentHash: string;
-  ipfsCid: string;
-  blockchain: string;
-  transactionHash: string;
+  ipfsCid: string | null;
+  transactionHash: string | null;
   blockNumber: number | null;
   status: CredentialStatus;
-  issuedAt: string;
+  issuedAt: string | null;
   revokedAt: string | null;
+  createdAt: string;
 }
+
+export type VerificationType = "credential_id" | "qr" | "document" | "public_link";
+export type VerificationResultCode =
+  | "record_found"
+  | "revoked"
+  | "pending"
+  | "error_state"
+  | "not_found";
 
 export type VerificationOutcome =
   | "idle"
   | "loading"
   | "verified"
+  | "record_found"
+  | "pending_record"
   | "hash_mismatch"
   | "revoked"
   | "not_found"
   | "error";
 
-export interface VerificationResult {
-  outcome: VerificationOutcome;
-  credential: Credential | null;
-  /** Hash registered on-chain, when known. */
-  registeredHash?: string;
-  /** Hash computed from the uploaded document, when a document was supplied. */
-  uploadedHash?: string;
-  message?: string;
-  checkedAt?: string;
+export interface VerificationEvent {
+  id: string;
+  credentialId: string;
+  verificationType: VerificationType;
+  result: VerificationResultCode;
+  createdAt: string;
 }
+
 
 export interface WalletState {
   status: "unsupported" | "disconnected" | "connecting" | "connected";
