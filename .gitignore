@@ -30,3 +30,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+contracts/node_modules
+contracts/artifacts
+contracts/cache
