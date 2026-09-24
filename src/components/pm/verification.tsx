@@ -13,6 +13,7 @@ import {
   PanelHeader,
   StatusBadge,
 } from "@/components/pm/primitives";
+import type { ChainState } from "@/lib/chain.server";
 import { SEPOLIA, type Credential, type VerificationOutcome } from "@/lib/proofmesh";
 
 const PLACEHOLDER = "—";
