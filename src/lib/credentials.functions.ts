@@ -3,9 +3,8 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-import type { ChainState } from "./chain.server";
 import { fail, type AppResult } from "./errors";
-import type { Credential, Issuer, VerificationEvent, VerificationResultCode } from "./proofmesh";
+import type { ChainState, Credential, Issuer, VerificationEvent, VerificationResultCode } from "./proofmesh";
 import {
   createCredentialSchema,
   credentialIdSchema,
