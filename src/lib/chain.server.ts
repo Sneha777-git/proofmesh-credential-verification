@@ -69,7 +69,8 @@ export async function readChainState(id: bigint, documentHash?: Hex): Promise<Ch
  * value is read from the contract/receipts, so a client cannot inject status or hashes.
  */
 export async function syncCredentialFromChain(id: bigint, txHint?: Hex) {
-  if (!isContractConfigured() || !CONTRACT_ADDRESS) return { ok: false as const, reason: "not_configured" };
+  const contractAddress = CONTRACT_ADDRESS;
+  if (!isContractConfigured() || !contractAddress) return { ok: false as const, reason: "not_configured" };
   const client = chainClient();
   const c = await readCredential(client, id);
   if (!c) return { ok: false as const, reason: "not_found" };
