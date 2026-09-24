@@ -117,3 +117,28 @@ export function truncateMiddle(value: string, lead = 10, tail = 8) {
 }
 
 export const CREDENTIAL_ID_PATTERN = /^PM-\d{6}$/;
+
+/** State read directly from the Sepolia contract (source of truth for proof state). */
+export interface ChainState {
+  configured: boolean;
+  available: boolean;
+  exists: boolean;
+  documentHash: `0x${string}` | null;
+  issuer: string | null;
+  issuerAuthorized: boolean | null;
+  issuedAt: string | null;
+  credentialType: string | null;
+  revoked: boolean;
+  hashMatches: boolean | null;
+}
+
+/** Transaction progress shown on the Issue page. Success only after a mined receipt. */
+export const TX_STEPS = [
+  "FILE HASHED",
+  "PREPARING",
+  "WAITING FOR WALLET",
+  "TRANSACTION SUBMITTED",
+  "CONFIRMING",
+  "CONFIRMED",
+  "DATABASE SYNCED",
+] as const;

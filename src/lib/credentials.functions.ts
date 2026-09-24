@@ -4,16 +4,17 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 import { fail, type AppResult } from "./errors";
-import type { Credential, Issuer, VerificationEvent, VerificationResultCode } from "./proofmesh";
+import type { ChainState, Credential, Issuer, VerificationEvent, VerificationResultCode } from "./proofmesh";
 import {
   createCredentialSchema,
   credentialIdSchema,
+  documentHashSchema,
   updateStatusSchema,
   verificationTypeSchema,
   walletAddressSchema,
 } from "./validation";
 
-function safeParse<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, input: unknown): T | null {
+function safeParse<S extends z.ZodTypeAny>(schema: S, input: unknown): z.output<S> | null {
   const parsed = schema.safeParse(input);
   return parsed.success ? parsed.data : null;
 }
@@ -43,25 +44,79 @@ export const verifyCredentialRecord = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
-    }): Promise<AppResult<{ result: VerificationResultCode; credential: Credential | null }>> => {
+    }): Promise<
+      AppResult<{ result: VerificationResultCode; credential: Credential | null; chain: ChainState }>
+    > => {
       const parsed = safeParse(
-        z.object({ credentialId: credentialIdSchema, type: verificationTypeSchema }),
+        z.object({
+          credentialId: credentialIdSchema,
+          type: verificationTypeSchema,
+          documentHash: documentHashSchema.optional(),
+        }),
         data,
       );
       if (!parsed) return fail("invalid_input");
       try {
+        const chainMod = await import("./chain.server");
+        const { parseCredentialId } = await import("./web3/config");
+        const numericId = parseCredentialId(parsed.credentialId);
+        const chain = numericId
+          ? await chainMod.readChainState(numericId, parsed.documentHash as `0x${string}` | undefined)
+          : await chainMod.readChainState(0n);
+
         const svc = await import("./credentials.server");
         const db = await publicDb();
+        let credential = await svc.getCredentialByCredentialId(db, parsed.credentialId);
+        // Keep the index in step with the chain (source of truth) when they disagree.
+        if (numericId && chain.exists) {
+          const stale =
+            !credential.ok ||
+            credential.data.status !== (chain.revoked ? "REVOKED" : "ACTIVE") ||
+            !credential.data.transactionHash;
+          if (stale) {
+            await chainMod.syncCredentialFromChain(numericId).catch(() => undefined);
+            credential = await svc.getCredentialByCredentialId(db, parsed.credentialId);
+          }
+        }
         const recorded = await svc.createVerificationEvent(db, parsed.credentialId, parsed.type);
-        if (!recorded.ok) return recorded;
-        if (recorded.data === "not_found") return { ok: true, data: { result: "not_found", credential: null } };
-        const credential = await svc.getCredentialByCredentialId(db, parsed.credentialId);
-        return { ok: true, data: { result: recorded.data, credential: credential.ok ? credential.data : null } };
-      } catch {
+        const result: VerificationResultCode = recorded.ok ? recorded.data : "not_found";
+        return {
+          ok: true,
+          data: { result, credential: credential.ok ? credential.data : null, chain },
+        };
+      } catch (error) {
+        console.error("[verify]", error instanceof Error ? error.message : error);
         return fail("unavailable");
       }
     },
   );
+
+/** Public but safe: the caller only names an ID; every stored value is read from the chain. */
+export const syncFromChain = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => input)
+  .handler(async ({ data }): Promise<AppResult<Credential>> => {
+    const parsed = safeParse(
+      z.object({
+        credentialId: credentialIdSchema,
+        txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
+      }),
+      data,
+    );
+    if (!parsed) return fail("invalid_input");
+    try {
+      const { parseCredentialId } = await import("./web3/config");
+      const id = parseCredentialId(parsed.credentialId);
+      if (!id) return fail("invalid_input");
+      const chainMod = await import("./chain.server");
+      const res = await chainMod.syncCredentialFromChain(id, parsed.txHash as `0x${string}` | undefined);
+      if (!res.ok) return fail(res.reason === "not_found" ? "not_found" : "unavailable");
+      const svc = await import("./credentials.server");
+      return svc.getCredentialByCredentialId(await publicDb(), parsed.credentialId);
+    } catch (error) {
+      console.error("[sync]", error instanceof Error ? error.message : error);
+      return fail("unavailable");
+    }
+  });
 
 export const fetchRegistryOverview = createServerFn({ method: "GET" }).handler(
   async (): Promise<
