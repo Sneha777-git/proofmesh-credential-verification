@@ -3,8 +3,10 @@ import { Menu, Wallet, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { Alert, Badge, Button, NetworkBadge } from "@/components/pm/primitives";
-import { SEPOLIA } from "@/lib/proofmesh";
+import { SEPOLIA, truncateMiddle } from "@/lib/proofmesh";
 import { cn } from "@/lib/utils";
+import { CHAIN_LABEL } from "@/lib/web3/config";
+import { useWallet } from "@/lib/web3/wallet";
 
 const NAV = [
   { to: "/verify", label: "Verify" },
@@ -13,10 +15,7 @@ const NAV = [
   { to: "/about", label: "About" },
 ] as const;
 
-/**
- * Wallet UI only. No provider is wired up in Phase 1, so this never claims a
- * connected wallet — it explains that connection arrives with the next phase.
- */
+/** Browser wallet control: connect, disconnect, address, network detection and switch. */
 export function WalletButton({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const wallet = useWallet();
