@@ -10,8 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IssueRouteImport } from './routes/issue'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as CredentialsCredentialIdRouteImport } from './routes/credentials.$credentialId'
 import { Route as VerifyIndexRouteImport } from './routes/verify.index'
 import { Route as VerifyCredentialIdRouteImport } from './routes/verify.$credentialId'
@@ -19,6 +21,11 @@ import { Route as VerifyCredentialIdRouteImport } from './routes/verify.$credent
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -29,6 +36,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const IssueRoute = IssueRouteImport.update({
   id: '/issue',
   path: '/issue',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CredentialsCredentialIdRoute = CredentialsCredentialIdRouteImport.update({
@@ -49,16 +61,20 @@ const VerifyCredentialIdRoute = VerifyCredentialIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/dashboard': typeof DashboardRoute
   '/issue': typeof IssueRoute
+  '/settings': typeof SettingsRoute
   '/credentials/$credentialId': typeof CredentialsCredentialIdRoute
   '/verify/$credentialId': typeof VerifyCredentialIdRoute
   '/verify/': typeof VerifyIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/dashboard': typeof DashboardRoute
   '/issue': typeof IssueRoute
+  '/settings': typeof SettingsRoute
   '/credentials/$credentialId': typeof CredentialsCredentialIdRoute
   '/verify/$credentialId': typeof VerifyCredentialIdRoute
   '/verify': typeof VerifyIndexRoute
@@ -66,8 +82,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/dashboard': typeof DashboardRoute
   '/issue': typeof IssueRoute
+  '/settings': typeof SettingsRoute
   '/credentials/$credentialId': typeof CredentialsCredentialIdRoute
   '/verify/$credentialId': typeof VerifyCredentialIdRoute
   '/verify/': typeof VerifyIndexRoute
@@ -76,24 +94,30 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/dashboard'
     | '/issue'
+    | '/settings'
     | '/credentials/$credentialId'
     | '/verify/$credentialId'
     | '/verify/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/dashboard'
     | '/issue'
+    | '/settings'
     | '/credentials/$credentialId'
     | '/verify/$credentialId'
     | '/verify'
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/dashboard'
     | '/issue'
+    | '/settings'
     | '/credentials/$credentialId'
     | '/verify/$credentialId'
     | '/verify/'
@@ -101,8 +125,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   DashboardRoute: typeof DashboardRoute
   IssueRoute: typeof IssueRoute
+  SettingsRoute: typeof SettingsRoute
   CredentialsCredentialIdRoute: typeof CredentialsCredentialIdRoute
   VerifyCredentialIdRoute: typeof VerifyCredentialIdRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
@@ -117,6 +143,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -129,6 +162,13 @@ declare module '@tanstack/react-router' {
       path: '/issue'
       fullPath: '/issue'
       preLoaderRoute: typeof IssueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/credentials/$credentialId': {
@@ -157,8 +197,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   DashboardRoute: DashboardRoute,
   IssueRoute: IssueRoute,
+  SettingsRoute: SettingsRoute,
   CredentialsCredentialIdRoute: CredentialsCredentialIdRoute,
   VerifyCredentialIdRoute: VerifyCredentialIdRoute,
   VerifyIndexRoute: VerifyIndexRoute,
