@@ -93,12 +93,16 @@ export function RevokeAction({ credentialId, issuerWallet }: { credentialId: str
     if (!id || !walletClient || !wallet.address) return;
     setError(null);
     setHash(null);
+    let txHash: Hex | undefined;
     try {
       await revokeOnChain(client, walletClient, wallet.address, id, (p, h) => {
         setPhase(p);
-        if (h) setHash(h);
+        if (h) {
+          txHash = h;
+          setHash(h);
+        }
       });
-      await sync({ data: hash ? { credentialId, txHash: hash } : { credentialId } }).catch(() => undefined);
+      await sync({ data: txHash ? { credentialId, txHash } : { credentialId } }).catch(() => undefined);
       await queryClient.invalidateQueries();
     } catch (e) {
       setPhase(null);
