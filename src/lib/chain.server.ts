@@ -82,7 +82,7 @@ export async function syncCredentialFromChain(id: bigint, txHint?: Hex) {
       const receipt = await client.getTransactionReceipt({ hash: txHint });
       const logs = parseEventLogs({ abi: credentialRegistryAbi, logs: receipt.logs, eventName: "CredentialRegistered" });
       const match = logs.find(
-        (l) => l.address.toLowerCase() === CONTRACT_ADDRESS.toLowerCase() && l.args.credentialId === id,
+        (l) => l.address.toLowerCase() === contractAddress.toLowerCase() && l.args.credentialId === id,
       );
       if (match) {
         transactionHash = receipt.transactionHash;
@@ -95,7 +95,7 @@ export async function syncCredentialFromChain(id: bigint, txHint?: Hex) {
   if (!transactionHash) {
     try {
       const logs = await client.getContractEvents({
-        address: CONTRACT_ADDRESS,
+        address: contractAddress,
         abi: credentialRegistryAbi,
         eventName: "CredentialRegistered",
         args: { credentialId: id },
