@@ -31,7 +31,7 @@ function PublicVerifyPage() {
   const { credentialId: raw } = useParams({ from: "/verify/$credentialId" });
   const credentialId = raw.toUpperCase();
   const valid = CREDENTIAL_ID_PATTERN.test(credentialId);
-  const { outcome, credential, message, run } = useVerifyRecord();
+  const { outcome, credential, chain, message, run } = useVerifyRecord();
 
   useEffect(() => {
     if (valid) void run(credentialId, "public_link");
@@ -88,6 +88,7 @@ function PublicVerifyPage() {
           outcome={valid ? outcome : "error"}
           credentialId={credentialId}
           credential={credential}
+          chain={chain}
           message={valid ? message : "This is not a valid credential ID. IDs look like PM-000001."}
           onRetry={() => valid && void run(credentialId, "public_link")}
         />
