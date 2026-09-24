@@ -96,7 +96,10 @@ async function runTx(
   if (receipt.status !== "success") throw new Error("transaction_reverted");
   const logs = parseEventLogs({ abi: credentialRegistryAbi, logs: receipt.logs, eventName: "CredentialRegistered" });
   onPhase("confirmed", hash);
-  return { hash, blockNumber: receipt.blockNumber, credentialId: logs[0]?.args.credentialId };
+  const credentialId = logs[0]?.args.credentialId;
+  return credentialId === undefined
+    ? { hash, blockNumber: receipt.blockNumber }
+    : { hash, blockNumber: receipt.blockNumber, credentialId };
 }
 
 export function registerOnChain(

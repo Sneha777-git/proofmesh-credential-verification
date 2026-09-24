@@ -18,29 +18,78 @@ const NAV = [
  * connected wallet — it explains that connection arrives with the next phase.
  */
 export function WalletButton({ className }: { className?: string }) {
-  const [notice, setNotice] = useState(false);
+  const [open, setOpen] = useState(false);
+  const wallet = useWallet();
+  const label =
+    wallet.status === "connected" && wallet.address
+      ? wallet.wrongNetwork
+        ? "Wrong network"
+        : truncateMiddle(wallet.address, 6, 4)
+      : wallet.status === "connecting"
+        ? "Connecting…"
+        : "Connect wallet";
   return (
     <div className={cn("relative", className)}>
       <Button
-        variant="primary"
+        variant={wallet.wrongNetwork ? "danger" : wallet.status === "connected" ? "outline" : "primary"}
         size="sm"
-        aria-expanded={notice}
-        onClick={() => setNotice((open) => !open)}
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
       >
         <Wallet className="h-3.5 w-3.5" aria-hidden />
-        Connect wallet
+        <span className={wallet.status === "connected" && !wallet.wrongNetwork ? "font-mono normal-case" : ""}>
+          {label}
+        </span>
       </Button>
-      {notice ? (
-        <div className="absolute right-0 top-11 z-50 w-72 rounded-sm border border-border bg-panel p-4 shadow-lift">
+      {open ? (
+        <div className="absolute right-0 top-11 z-50 w-80 rounded-sm border border-border bg-panel p-4 shadow-lift">
           <p className="label-mono">Wallet status</p>
-          <p className="mt-2 text-sm text-subtle">
-            Not connected. MetaMask connection is not implemented yet — it arrives with
-            the on-chain phase. ProofMesh will never ask for a seed phrase or private
-            key.
-          </p>
+          {wallet.status === "unsupported" ? (
+            <p className="mt-2 text-sm text-subtle">
+              No browser wallet detected. Install MetaMask to issue or revoke. Verifying
+              credentials never needs a wallet.
+            </p>
+          ) : wallet.status === "connected" && wallet.address ? (
+            <div className="mt-2 space-y-2">
+              <p className="break-all font-mono text-[0.72rem] text-foreground">{wallet.address}</p>
+              {wallet.wrongNetwork ? (
+                <div className="rounded-sm border border-destructive/40 bg-destructive/10 p-3">
+                  <p className="font-mono text-[0.72rem] uppercase tracking-[0.14em] text-destructive">
+                    Wrong network
+                  </p>
+                  <p className="mt-1 text-xs text-subtle">
+                    Connected to chain {wallet.chainId}. ProofMesh only submits to {CHAIN_LABEL}.
+                  </p>
+                  <Button size="sm" className="mt-2" onClick={() => void wallet.switchToSepolia()}>
+                    Switch to Sepolia
+                  </Button>
+                </div>
+              ) : (
+                <Badge tone="accent">{CHAIN_LABEL}</Badge>
+              )}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-subtle">
+              Not connected. ProofMesh will never ask for a seed phrase, private key or wallet
+              password — every transaction is approved inside your wallet.
+            </p>
+          )}
+          {wallet.error ? <p className="mt-2 text-xs text-warning">{wallet.error}</p> : null}
           <div className="mt-3 flex items-center justify-between gap-2">
-            <Badge>Disconnected</Badge>
-            <Button size="sm" variant="ghost" onClick={() => setNotice(false)}>
+            {wallet.status === "connected" ? (
+              <Button size="sm" variant="ghost" onClick={wallet.disconnect}>
+                Disconnect
+              </Button>
+            ) : wallet.status !== "unsupported" ? (
+              <Button size="sm" variant="primary" loading={wallet.status === "connecting"} onClick={() => void wallet.connect()}>
+                Connect
+              </Button>
+            ) : (
+              <a href="https://metamask.io/download/" target="_blank" rel="noreferrer">
+                <Button size="sm">Get MetaMask</Button>
+              </a>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
               Close
             </Button>
           </div>
