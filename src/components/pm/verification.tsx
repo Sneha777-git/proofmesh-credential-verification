@@ -17,7 +17,7 @@ import { SEPOLIA, type VerificationOutcome } from "@/lib/proofmesh";
 const PLACEHOLDER = "—";
 
 /** Field layout used by every "verified" style result. Values stay empty until Phase 2. */
-function CredentialFields({ credentialId }: { credentialId?: string }) {
+function CredentialFields({ credentialId }: { credentialId?: string | undefined }) {
   return (
     <dl>
       <DataRow label="Credential ID">
@@ -46,7 +46,7 @@ function CredentialFields({ credentialId }: { credentialId?: string }) {
   );
 }
 
-function ResultActions({ onRetry }: { onRetry?: () => void }) {
+function ResultActions({ onRetry }: { onRetry?: (() => void) | undefined }) {
   return (
     <div className="flex flex-wrap gap-2 border-t border-border px-4 py-4 sm:px-5">
       <Button variant="primary" size="sm" onClick={onRetry}>
@@ -75,8 +75,8 @@ export function VerificationResultView({
   onRetry,
 }: {
   outcome: VerificationOutcome;
-  credentialId?: string;
-  onRetry?: () => void;
+  credentialId?: string | undefined;
+  onRetry?: (() => void) | undefined;
 }) {
   if (outcome === "idle") {
     return (
