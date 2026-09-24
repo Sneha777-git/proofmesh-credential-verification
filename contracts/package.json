@@ -1,0 +1,11 @@
+{
+  "name": "proofmesh-contracts",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "authorize:sepolia": "hardhat run scripts/authorize-issuer.ts --network sepolia"
+  }
+}
