@@ -18,7 +18,7 @@ import {
 import { CREDENTIAL_ID_PATTERN, type VerificationOutcome } from "@/lib/proofmesh";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/verify")({
+export const Route = createFileRoute("/verify/")({
   head: () => ({
     meta: [
       { title: "Verify a credential — ProofMesh" },
