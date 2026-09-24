@@ -15,7 +15,8 @@ import {
   OUTCOME_PREVIEWS,
   VerificationResultView,
 } from "@/components/pm/verification";
-import { CREDENTIAL_ID_PATTERN, type VerificationOutcome } from "@/lib/proofmesh";
+import { CREDENTIAL_ID_PATTERN } from "@/lib/proofmesh";
+import { useVerifyRecord } from "@/lib/use-verify";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/verify/")({
@@ -52,18 +53,27 @@ function VerifyPage() {
   const [idError, setIdError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [qrFile, setQrFile] = useState<File | null>(null);
-  const [outcome, setOutcome] = useState<VerificationOutcome>("idle");
+  const { outcome, setOutcome, credential, message, run: lookup } = useVerifyRecord();
+  const [previewMessage, setPreviewMessage] = useState<string | undefined>(undefined);
 
   function run() {
+    setPreviewMessage(undefined);
     if (method === "id") {
-      if (!CREDENTIAL_ID_PATTERN.test(credentialId.trim().toUpperCase())) {
+      const id = credentialId.trim().toUpperCase();
+      if (!CREDENTIAL_ID_PATTERN.test(id)) {
         setIdError("Use the format PM-000001.");
         return;
       }
       setIdError(null);
+      void lookup(id, "credential_id");
+      return;
     }
-    setOutcome("loading");
-    window.setTimeout(() => setOutcome("error"), 700);
+    setOutcome("error");
+    setPreviewMessage(
+      method === "qr"
+        ? "QR decoding is not enabled yet. Enter the credential ID printed under the code instead."
+        : "Document hashing and comparison arrive with the blockchain phase. Look up the credential ID for now.",
+    );
   }
 
   return (
@@ -152,8 +162,8 @@ function VerifyPage() {
                 Verify
               </Button>
               <p className="text-xs text-muted-foreground">
-                Verification backend is not connected yet, so any attempt returns an
-                unavailable state rather than a result.
+                ID lookup checks the ProofMesh registry record. On-chain proof checking is
+                not connected yet, so results never claim blockchain verification.
               </p>
             </div>
           </Panel>
@@ -169,7 +179,10 @@ function VerifyPage() {
                   key={item.outcome}
                   size="sm"
                   variant={outcome === item.outcome ? "primary" : "outline"}
-                  onClick={() => setOutcome(item.outcome)}
+                  onClick={() => {
+                    setPreviewMessage("Layout preview only — no lookup was performed.");
+                    setOutcome(item.outcome);
+                  }}
                 >
                   {item.label}
                 </Button>
@@ -185,6 +198,8 @@ function VerifyPage() {
           <VerificationResultView
             outcome={outcome}
             credentialId={method === "id" ? credentialId.toUpperCase() || undefined : undefined}
+            credential={previewMessage ? null : credential}
+            message={previewMessage ?? message}
             onRetry={() => setOutcome("idle")}
           />
           <Alert tone="info" title="Shareable verification link">

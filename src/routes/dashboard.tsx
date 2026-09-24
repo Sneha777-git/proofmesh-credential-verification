@@ -1,14 +1,21 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 
 import {
   Alert,
   Button,
+  CopyButton,
   EmptyState,
+  LoadingRows,
   Panel,
   PanelHeader,
+  StatusBadge,
 } from "@/components/pm/primitives";
 import { Container, PageHeader, WalletButton } from "@/components/pm/site";
-import type { Credential } from "@/lib/proofmesh";
+import { formatDate } from "@/components/pm/verification";
+import { fetchRegistryOverview } from "@/lib/credentials.functions";
+import { truncateMiddle } from "@/lib/proofmesh";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -16,36 +23,38 @@ export const Route = createFileRoute("/dashboard")({
       { title: "Issuer dashboard — ProofMesh" },
       {
         name: "description",
-        content:
-          "Manage issued credentials, check their on-chain status and revoke when needed.",
+        content: "Manage issued credentials, check their status and revoke when needed.",
       },
       { property: "og:title", content: "Issuer dashboard — ProofMesh" },
-      {
-        property: "og:description",
-        content: "Credential registry overview for authorized issuers.",
-      },
+      { property: "og:description", content: "Credential registry overview for authorized issuers." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: DashboardPage,
 });
 
-const STATS = [
-  { label: "Credentials issued", hint: "Registered proofs" },
-  { label: "Active", hint: "Not revoked" },
-  { label: "Revoked", hint: "Marked invalid" },
-  { label: "Verifications", hint: "Public checks" },
-];
-
-/** No backend in Phase 1: the registry is intentionally empty. */
-const credentials: Credential[] = [];
-
 function DashboardPage() {
+  const load = useServerFn(fetchRegistryOverview);
+  const query = useQuery({ queryKey: ["registry-overview"], queryFn: () => load() });
+  const res = query.data;
+  const overview = res?.ok ? res.data : null;
+  const failed = query.isError || (res && !res.ok);
+  const credentials = overview?.credentials ?? [];
+
+  const stats = [
+    { label: "Credentials", hint: "Records in the registry", value: overview ? credentials.length : null },
+    { label: "Active", hint: "Anchored and valid", value: overview ? credentials.filter((c) => c.status === "ACTIVE").length : null },
+    { label: "Revoked", hint: "Marked invalid", value: overview ? credentials.filter((c) => c.status === "REVOKED").length : null },
+    { label: "Verifications", hint: "Recorded lookups", value: overview ? overview.verifications : null },
+  ];
+
   return (
     <div>
       <PageHeader
         eyebrow="Issuer workspace"
         title="Dashboard"
-        description="Everything you have registered, with its proof trail and current status."
+        description="Every credential record in the registry, with its proof trail and current status."
         actions={
           <>
             <WalletButton />
@@ -57,17 +66,28 @@ function DashboardPage() {
       />
 
       <Container className="space-y-8 py-10 lg:py-14">
-        <Alert tone="warning" title="No data source connected">
-          The credential registry is not connected yet, so there are no statistics to show.
-          Counters stay blank rather than displaying invented numbers.
-        </Alert>
+        {failed ? (
+          <Alert tone="warning" title="Registry unavailable">
+            {res && !res.ok ? res.message : "The credential registry could not be reached."} Counters
+            stay blank rather than showing invented numbers.
+          </Alert>
+        ) : overview && overview.issuers.authorized === 0 ? (
+          <Alert tone="info" title="No authorized issuers configured">
+            The registry is connected, but no issuer has been authorized yet, so no credentials
+            can be created. Issuer authorization will be tied to the smart contract in the
+            next phase.
+          </Alert>
+        ) : null}
 
         <div className="grid gap-px overflow-hidden rounded-sm border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-          {STATS.map((stat) => (
+          {stats.map((stat) => (
             <div key={stat.label} className="bg-panel/70 p-5">
               <p className="label-mono">{stat.label}</p>
-              <p className="mt-4 font-mono text-3xl text-muted-foreground" aria-label="No data available">
-                —
+              <p
+                className="mt-4 font-mono text-3xl text-foreground"
+                aria-label={stat.value === null ? "No data available" : undefined}
+              >
+                {stat.value === null ? <span className="text-muted-foreground">—</span> : stat.value}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">{stat.hint}</p>
             </div>
@@ -76,13 +96,15 @@ function DashboardPage() {
 
         <Panel>
           <PanelHeader
-            title="Issued credentials"
+            title="Credential records"
             description="Status, issuance date, transaction and per-credential actions."
           />
-          {credentials.length === 0 ? (
+          {query.isLoading ? (
+            <LoadingRows rows={4} />
+          ) : credentials.length === 0 ? (
             <EmptyState
               title="No credentials yet"
-              description="Once an issuer wallet is connected and a credential is registered, it appears here with its hash, transaction and status."
+              description="Once an authorized issuer registers a credential, it appears here with its hash, transaction and status."
               action={
                 <Link to="/issue">
                   <Button size="sm" variant="primary">
@@ -94,42 +116,38 @@ function DashboardPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[46rem] text-left">
-                <caption className="sr-only">Issued credentials</caption>
+                <caption className="sr-only">Credential records</caption>
                 <thead>
                   <tr className="border-b border-border">
-                    {["Credential", "Type", "Status", "Issued", "Transaction", "Actions"].map(
-                      (heading) => (
-                        <th key={heading} scope="col" className="label-mono px-4 py-3">
-                          {heading}
-                        </th>
-                      ),
-                    )}
+                    {["Credential", "Type", "Status", "Created", "Transaction", "Actions"].map((heading) => (
+                      <th key={heading} scope="col" className="label-mono px-4 py-3">
+                        {heading}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {credentials.map((credential) => (
                     <tr key={credential.credentialId} className="border-b border-border">
-                      <td className="px-4 py-3 font-mono text-[0.78rem]">
-                        {credential.credentialId}
-                      </td>
+                      <td className="px-4 py-3 font-mono text-[0.78rem]">{credential.credentialId}</td>
                       <td className="px-4 py-3 text-sm">{credential.credentialType}</td>
-                      <td className="px-4 py-3 text-sm">{credential.status}</td>
-                      <td className="px-4 py-3 text-sm">{credential.issuedAt}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <StatusBadge status={credential.status} />
+                      </td>
+                      <td className="px-4 py-3 text-sm">{formatDate(credential.createdAt)}</td>
                       <td className="px-4 py-3 font-mono text-[0.78rem]">
-                        {credential.transactionHash}
+                        {credential.transactionHash ? truncateMiddle(credential.transactionHash) : "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-2">
-                          <Button size="sm" variant="ghost">
-                            View
-                          </Button>
-                          <Button size="sm" variant="ghost">
-                            Verify
-                          </Button>
-                          <Button size="sm" variant="ghost">
-                            Copy URL
-                          </Button>
-                          <Button size="sm" variant="danger">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link to="/credentials/$credentialId" params={{ credentialId: credential.credentialId }}>
+                            <Button size="sm" variant="ghost">View</Button>
+                          </Link>
+                          <Link to="/verify/$credentialId" params={{ credentialId: credential.credentialId }}>
+                            <Button size="sm" variant="ghost">Verify</Button>
+                          </Link>
+                          <CopyButton value={`/verify/${credential.credentialId}`} label="verification URL" />
+                          <Button size="sm" variant="danger" disabled title="Revocation requires a signed-in authorized issuer">
                             Revoke
                           </Button>
                         </div>
@@ -140,25 +158,6 @@ function DashboardPage() {
               </table>
             </div>
           )}
-        </Panel>
-
-        <Panel>
-          <PanelHeader title="Available actions" description="What each row will offer once the registry is live." />
-          <dl className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["View", "Open the full technical detail page for the credential."],
-              ["Verify", "Run a public verification exactly as a third party would."],
-              ["Revoke", "Record on-chain that the credential is no longer valid."],
-              ["Copy URL", "Share the public verification link with anyone."],
-            ].map(([term, description]) => (
-              <div key={term} className="bg-panel/70 p-5">
-                <dt className="font-mono text-[0.72rem] uppercase tracking-[0.14em] text-primary">
-                  {term}
-                </dt>
-                <dd className="mt-3 text-sm text-subtle">{description}</dd>
-              </div>
-            ))}
-          </dl>
         </Panel>
       </Container>
     </div>

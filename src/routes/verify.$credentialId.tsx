@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect } from "react";
 
 import { Alert, Button, MonoValue, Panel, PanelHeader } from "@/components/pm/primitives";
 import { Container, PageHeader } from "@/components/pm/site";
 import { VerificationResultView } from "@/components/pm/verification";
-import { type VerificationOutcome } from "@/lib/proofmesh";
+import { CREDENTIAL_ID_PATTERN } from "@/lib/proofmesh";
+import { useVerifyRecord } from "@/lib/use-verify";
 
 export const Route = createFileRoute("/verify/$credentialId")({
   head: ({ params }) => ({
@@ -19,21 +20,30 @@ export const Route = createFileRoute("/verify/$credentialId")({
         property: "og:description",
         content: "Independent, account-free credential verification.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: PublicVerifyPage,
 });
 
 function PublicVerifyPage() {
-  const { credentialId } = useParams({ from: "/verify/$credentialId" });
-  const [outcome, setOutcome] = useState<VerificationOutcome>("error");
+  const { credentialId: raw } = useParams({ from: "/verify/$credentialId" });
+  const credentialId = raw.toUpperCase();
+  const valid = CREDENTIAL_ID_PATTERN.test(credentialId);
+  const { outcome, credential, message, run } = useVerifyRecord();
+
+  useEffect(() => {
+    if (valid) void run(credentialId, "public_link");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [credentialId, valid]);
 
   return (
     <div>
       <PageHeader
         eyebrow="Public verification"
         title="Credential check"
-        description="This page can be opened by anyone. No account, wallet or app install is required to inspect the proof."
+        description="This page can be opened by anyone. No account, wallet or app install is required to inspect the record."
         actions={
           <Link to="/verify">
             <Button size="sm">Verify something else</Button>
@@ -61,25 +71,25 @@ function PublicVerifyPage() {
               <Button
                 variant="primary"
                 className="w-full"
-                onClick={() => {
-                  setOutcome("loading");
-                  window.setTimeout(() => setOutcome("error"), 700);
-                }}
+                disabled={!valid}
+                onClick={() => void run(credentialId, "public_link")}
               >
-                Re-check proof
+                Re-check record
               </Button>
             </div>
           </Panel>
           <Alert tone="info" title="Independent check">
-            You can also verify without this page: hash the document yourself with SHA-256
-            and compare it with the value registered in the contract.
+            Once on-chain proofs are live you can verify without this page: hash the
+            document yourself with SHA-256 and compare it with the value in the contract.
           </Alert>
         </div>
 
         <VerificationResultView
-          outcome={outcome}
+          outcome={valid ? outcome : "error"}
           credentialId={credentialId}
-          onRetry={() => setOutcome("error")}
+          credential={credential}
+          message={valid ? message : "This is not a valid credential ID. IDs look like PM-000001."}
+          onRetry={() => valid && void run(credentialId, "public_link")}
         />
       </Container>
     </div>

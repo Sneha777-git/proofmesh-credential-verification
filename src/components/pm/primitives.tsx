@@ -151,10 +151,10 @@ const STATUS_META: Record<
   CredentialStatus,
   { label: string; tone: "accent" | "danger" | "warning" | "neutral"; Icon: typeof Check }
 > = {
-  registered: { label: "Registered", tone: "accent", Icon: ShieldCheck },
-  revoked: { label: "Revoked", tone: "danger", Icon: ShieldOff },
-  pending: { label: "Pending", tone: "warning", Icon: CircleDashed },
-  unknown: { label: "Unknown", tone: "neutral", Icon: Info },
+  ACTIVE: { label: "Active", tone: "accent", Icon: ShieldCheck },
+  REVOKED: { label: "Revoked", tone: "danger", Icon: ShieldOff },
+  PENDING: { label: "Pending", tone: "warning", Icon: CircleDashed },
+  ERROR: { label: "Error", tone: "neutral", Icon: Info },
 };
 
 /** Status is conveyed by icon + text, never colour alone. */
