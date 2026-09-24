@@ -5,6 +5,7 @@ import {
   Alert,
   Badge,
   Button,
+  CopyButton,
   DataRow,
   EmptyState,
   LoadingRows,
@@ -12,70 +13,133 @@ import {
   PanelHeader,
   StatusBadge,
 } from "@/components/pm/primitives";
-import { SEPOLIA, type VerificationOutcome } from "@/lib/proofmesh";
+import { SEPOLIA, type Credential, type VerificationOutcome } from "@/lib/proofmesh";
 
 const PLACEHOLDER = "—";
 
-/** Field layout used by every "verified" style result. Values stay empty until Phase 2. */
-function CredentialFields({ credentialId }: { credentialId?: string | undefined }) {
+function Mono({ value }: { value: string | number | null | undefined }) {
+  return (
+    <span className="break-all font-mono text-[0.78rem]">
+      {value === null || value === undefined || value === "" ? PLACEHOLDER : String(value)}
+    </span>
+  );
+}
+
+export function formatDate(value: string | null | undefined) {
+  if (!value) return PLACEHOLDER;
+  return new Date(value).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+}
+
+/** Field layout for every record-style result. Missing values render as "—", never invented. */
+export function CredentialFields({
+  credentialId,
+  credential,
+}: {
+  credentialId?: string | undefined;
+  credential?: Credential | null | undefined;
+}) {
   return (
     <dl>
       <DataRow label="Credential ID">
-        <span className="font-mono text-[0.78rem]">{credentialId ?? PLACEHOLDER}</span>
+        <Mono value={credential?.credentialId ?? credentialId} />
       </DataRow>
-      <DataRow label="Type">{PLACEHOLDER}</DataRow>
-      <DataRow label="Issuer">{PLACEHOLDER}</DataRow>
+      <DataRow label="Type">{credential?.credentialType ?? PLACEHOLDER}</DataRow>
+      <DataRow label="Issuer">
+        {credential?.issuer ? (
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {credential.issuer.issuerName}
+            <Badge tone={credential.issuer.authorizationStatus === "authorized" ? "accent" : "warning"}>
+              {credential.issuer.authorizationStatus}
+            </Badge>
+          </span>
+        ) : (
+          PLACEHOLDER
+        )}
+      </DataRow>
       <DataRow label="Issuer wallet">
-        <span className="font-mono text-[0.78rem]">{PLACEHOLDER}</span>
+        <Mono value={credential?.issuerWallet} />
       </DataRow>
-      <DataRow label="Issued date">{PLACEHOLDER}</DataRow>
+      <DataRow label="Issued date">{formatDate(credential?.issuedAt)}</DataRow>
       <DataRow label="Document hash (SHA-256)">
-        <span className="font-mono text-[0.78rem]">{PLACEHOLDER}</span>
+        <Mono value={credential?.documentHash} />
       </DataRow>
       <DataRow label="Blockchain">{SEPOLIA.name}</DataRow>
       <DataRow label="Transaction">
-        <span className="font-mono text-[0.78rem]">{PLACEHOLDER}</span>
+        <Mono value={credential?.transactionHash} />
       </DataRow>
       <DataRow label="Block">
-        <span className="font-mono text-[0.78rem]">{PLACEHOLDER}</span>
+        <Mono value={credential?.blockNumber} />
       </DataRow>
       <DataRow label="IPFS CID">
-        <span className="font-mono text-[0.78rem]">{PLACEHOLDER}</span>
+        <Mono value={credential?.ipfsCid} />
       </DataRow>
     </dl>
   );
 }
 
-function ResultActions({ onRetry }: { onRetry?: (() => void) | undefined }) {
+function ResultActions({
+  onRetry,
+  credential,
+}: {
+  onRetry?: (() => void) | undefined;
+  credential?: Credential | null | undefined;
+}) {
   return (
     <div className="flex flex-wrap gap-2 border-t border-border px-4 py-4 sm:px-5">
       <Button variant="primary" size="sm" onClick={onRetry}>
         Verify again
       </Button>
-      <Button size="sm" disabled title="Available once a proof is registered on-chain">
-        View transaction
-        <ExternalLink className="h-3 w-3" aria-hidden />
-      </Button>
+      {credential?.transactionHash ? (
+        <a
+          href={`${SEPOLIA.explorerBaseUrl}/tx/${credential.transactionHash}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Button size="sm">
+            View transaction
+            <ExternalLink className="h-3 w-3" aria-hidden />
+          </Button>
+        </a>
+      ) : (
+        <Button size="sm" disabled title="Available once a proof is registered on-chain">
+          View transaction
+          <ExternalLink className="h-3 w-3" aria-hidden />
+        </Button>
+      )}
       <Button size="sm" disabled title="Available once the document is stored on IPFS">
         View IPFS
       </Button>
-      <Button size="sm" disabled title="Available once a credential is returned">
-        Copy ID
-      </Button>
-      <Button size="sm" disabled title="Available once a credential is returned">
+      {credential ? (
+        <>
+          <CopyButton value={credential.credentialId} label="credential ID" />
+          <Link to="/credentials/$credentialId" params={{ credentialId: credential.credentialId }}>
+            <Button size="sm" variant="ghost">
+              Full record
+            </Button>
+          </Link>
+        </>
+      ) : null}
+      <Button size="sm" disabled title="Available in a later phase">
         Download report
       </Button>
     </div>
   );
 }
 
+const RECORD_ONLY_NOTE =
+  "This is a database record lookup only. On-chain proof checking is not connected yet, so this is not a blockchain verification.";
+
 export function VerificationResultView({
   outcome,
   credentialId,
+  credential,
+  message,
   onRetry,
 }: {
   outcome: VerificationOutcome;
   credentialId?: string | undefined;
+  credential?: Credential | null | undefined;
+  message?: string | undefined;
   onRetry?: (() => void) | undefined;
 }) {
   if (outcome === "idle") {
@@ -83,7 +147,7 @@ export function VerificationResultView({
       <Panel>
         <EmptyState
           title="No verification run yet"
-          description="Enter a credential ID, scan a QR code, or upload the original PDF. Results appear here with the full on-chain proof trail."
+          description="Enter a credential ID, scan a QR code, or upload the original PDF. Results appear here with the full proof trail."
         />
       </Panel>
     );
@@ -92,8 +156,34 @@ export function VerificationResultView({
   if (outcome === "loading") {
     return (
       <Panel>
-        <PanelHeader title="Checking proof" description="Resolving the registered proof." />
+        <PanelHeader title="Checking registry" description="Looking up the credential record." />
         <LoadingRows rows={5} />
+      </Panel>
+    );
+  }
+
+  if (outcome === "record_found" || outcome === "pending_record") {
+    const pending = outcome === "pending_record";
+    return (
+      <Panel>
+        <PanelHeader
+          title={pending ? "Record found — not yet anchored" : "Record found"}
+          description={
+            pending
+              ? "The issuer created this record, but it has not been registered on-chain yet."
+              : "A credential record with this ID exists in the ProofMesh registry."
+          }
+          aside={credential ? <StatusBadge status={credential.status} /> : null}
+        />
+        <div className="px-4 pt-4 sm:px-5">
+          <Alert tone={pending ? "warning" : "info"} title="Database record, not blockchain proof">
+            {RECORD_ONLY_NOTE} A record also does not certify the claims inside the document.
+          </Alert>
+        </div>
+        <div className="mt-4">
+          <CredentialFields credentialId={credentialId} credential={credential} />
+        </div>
+        <ResultActions onRetry={onRetry} credential={credential} />
       </Panel>
     );
   }
@@ -104,7 +194,7 @@ export function VerificationResultView({
         <PanelHeader
           title="Verified"
           description="A matching proof was found for this credential."
-          aside={<StatusBadge status="registered" />}
+          aside={<StatusBadge status="ACTIVE" />}
         />
         <div className="px-4 pt-4 sm:px-5">
           <Alert tone="accent" title="What this proves">
@@ -113,9 +203,9 @@ export function VerificationResultView({
           </Alert>
         </div>
         <div className="mt-4">
-          <CredentialFields credentialId={credentialId} />
+          <CredentialFields credentialId={credentialId} credential={credential} />
         </div>
-        <ResultActions onRetry={onRetry} />
+        <ResultActions onRetry={onRetry} credential={credential} />
       </Panel>
     );
   }
@@ -138,13 +228,13 @@ export function VerificationResultView({
         </div>
         <dl>
           <DataRow label="Registered hash">
-            <span className="font-mono text-[0.78rem]">{PLACEHOLDER}</span>
+            <Mono value={credential?.documentHash} />
           </DataRow>
           <DataRow label="Uploaded hash">
-            <span className="font-mono text-[0.78rem]">{PLACEHOLDER}</span>
+            <Mono value={null} />
           </DataRow>
         </dl>
-        <ResultActions onRetry={onRetry} />
+        <ResultActions onRetry={onRetry} credential={credential} />
       </Panel>
     );
   }
@@ -154,17 +244,17 @@ export function VerificationResultView({
       <Panel>
         <PanelHeader
           title="Credential revoked"
-          description="This credential was registered on-chain and later revoked by its issuer."
-          aside={<StatusBadge status="revoked" />}
+          description="The issuer has marked this credential as no longer valid."
+          aside={<StatusBadge status="REVOKED" />}
         />
         <div className="px-4 py-4 sm:px-5">
           <Alert tone="danger" title="Registered, then revoked">
-            The original proof still exists on-chain and remains publicly auditable. The
-            issuer has since marked the credential as no longer valid.
+            Revocation does not delete history: the original record remains auditable.
+            {credential?.revokedAt ? ` Revoked ${formatDate(credential.revokedAt)}.` : ""}
           </Alert>
         </div>
-        <CredentialFields credentialId={credentialId} />
-        <ResultActions onRetry={onRetry} />
+        <CredentialFields credentialId={credentialId} credential={credential} />
+        <ResultActions onRetry={onRetry} credential={credential} />
       </Panel>
     );
   }
@@ -172,10 +262,10 @@ export function VerificationResultView({
   if (outcome === "not_found") {
     return (
       <Panel>
-        <PanelHeader title="No proof found" aside={<Badge>Not found</Badge>} />
+        <PanelHeader title="No record found" aside={<Badge>Not found</Badge>} />
         <EmptyState
           title="Nothing registered for this reference"
-          description="No credential proof matches what you submitted. Check the credential ID, or ask the issuer for the verification link."
+          description="No credential record matches what you submitted. Check the credential ID, or ask the issuer for the verification link."
           action={
             <Button size="sm" onClick={onRetry}>
               Try another reference
@@ -190,10 +280,9 @@ export function VerificationResultView({
     <Panel>
       <PanelHeader title="Verification unavailable" aside={<Badge tone="warning">Error</Badge>} />
       <div className="px-4 py-4 sm:px-5">
-        <Alert tone="warning" title="Verification service not connected">
-          This is the Phase 1 frontend. The database, IPFS gateway and Sepolia contract are
-          not wired up yet, so no real verification can be performed. Nothing here is a
-          verdict about any credential.
+        <Alert tone="warning" title="Could not complete the check">
+          {message ??
+            "This check could not be completed. Nothing here is a verdict about any credential."}
         </Alert>
       </div>
       <div className="flex flex-wrap gap-2 px-4 pb-4 sm:px-5">
@@ -211,7 +300,8 @@ export function VerificationResultView({
 }
 
 export const OUTCOME_PREVIEWS: { outcome: VerificationOutcome; label: string }[] = [
-  { outcome: "verified", label: "Verified" },
+  { outcome: "record_found", label: "Record found" },
+  { outcome: "verified", label: "Verified (on-chain)" },
   { outcome: "hash_mismatch", label: "Hash mismatch" },
   { outcome: "revoked", label: "Revoked" },
   { outcome: "not_found", label: "Not found" },
