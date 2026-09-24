@@ -13,7 +13,7 @@ import {
   PanelHeader,
   StatusBadge,
 } from "@/components/pm/primitives";
-import { SEPOLIA, type Credential, type VerificationOutcome } from "@/lib/proofmesh";
+import { SEPOLIA, type ChainState, type Credential, type VerificationOutcome } from "@/lib/proofmesh";
 
 const PLACEHOLDER = "—";
 
@@ -127,27 +127,60 @@ function ResultActions({
 }
 
 const RECORD_ONLY_NOTE =
-  "This is a database record lookup only. On-chain proof checking is not connected yet, so this is not a blockchain verification.";
+  "This is a database record lookup only — on-chain state could not be read, so this is not a blockchain verification.";
+
+/** Values read directly from the Sepolia contract. */
+function ChainFields({ chain }: { chain: ChainState }) {
+  return (
+    <dl>
+      <DataRow label="Source">
+        <Badge tone="accent">Read from {SEPOLIA.name} testnet contract</Badge>
+      </DataRow>
+      <DataRow label="On-chain issuer">
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <Mono value={chain.issuer} />
+          {chain.issuerAuthorized !== null ? (
+            <Badge tone={chain.issuerAuthorized ? "accent" : "warning"}>
+              {chain.issuerAuthorized ? "Currently authorized" : "No longer authorized"}
+            </Badge>
+          ) : null}
+        </span>
+      </DataRow>
+      <DataRow label="On-chain document hash">
+        <Mono value={chain.documentHash} />
+      </DataRow>
+      <DataRow label="On-chain type">{chain.credentialType ?? PLACEHOLDER}</DataRow>
+      <DataRow label="Block timestamp">{formatDate(chain.issuedAt)}</DataRow>
+      <DataRow label="Revoked">{chain.revoked ? "Yes" : "No"}</DataRow>
+    </dl>
+  );
+}
 
 export function VerificationResultView({
   outcome,
   credentialId,
   credential,
+  chain,
+  uploadedHash,
   message,
   onRetry,
 }: {
   outcome: VerificationOutcome;
   credentialId?: string | undefined;
   credential?: Credential | null | undefined;
+  chain?: ChainState | null | undefined;
+  uploadedHash?: string | null | undefined;
   message?: string | undefined;
   onRetry?: (() => void) | undefined;
 }) {
+  const liveChain = chain && chain.available && chain.exists ? chain : null;
+
   if (outcome === "idle") {
     return (
       <Panel>
         <EmptyState
           title="No verification run yet"
-          description="Enter a credential ID, scan a QR code, or upload the original PDF. Results appear here with the full proof trail."
+          description="Enter a credential ID, or add the original PDF to compare its fingerprint. Results appear here with the on-chain proof trail."
         />
       </Panel>
     );
@@ -156,7 +189,7 @@ export function VerificationResultView({
   if (outcome === "loading") {
     return (
       <Panel>
-        <PanelHeader title="Checking registry" description="Looking up the credential record." />
+        <PanelHeader title="Reading Sepolia contract" description="Looking up the on-chain proof and the registry record." />
         <LoadingRows rows={5} />
       </Panel>
     );
@@ -167,17 +200,17 @@ export function VerificationResultView({
     return (
       <Panel>
         <PanelHeader
-          title={pending ? "Record found — not yet anchored" : "Record found"}
+          title={pending ? "Record found — not yet anchored" : "Database record found"}
           description={
             pending
               ? "The issuer created this record, but it has not been registered on-chain yet."
-              : "A credential record with this ID exists in the ProofMesh registry."
+              : "A credential record with this ID exists in the ProofMesh index."
           }
           aside={credential ? <StatusBadge status={credential.status} /> : null}
         />
         <div className="px-4 pt-4 sm:px-5">
-          <Alert tone={pending ? "warning" : "info"} title="Database record, not blockchain proof">
-            {RECORD_ONLY_NOTE} A record also does not certify the claims inside the document.
+          <Alert tone="warning" title="Database record, not blockchain proof">
+            {message ?? RECORD_ONLY_NOTE} A record also does not certify the claims inside the document.
           </Alert>
         </div>
         <div className="mt-4">
@@ -189,20 +222,34 @@ export function VerificationResultView({
   }
 
   if (outcome === "verified") {
+    const documentMatched = Boolean(uploadedHash) && liveChain?.hashMatches === true;
     return (
       <Panel>
         <PanelHeader
-          title="Verified"
-          description="A matching proof was found for this credential."
+          title={documentMatched ? "Verified — document matches" : "Registered on-chain"}
+          description={
+            documentMatched
+              ? "The uploaded file's SHA-256 fingerprint equals the one registered on Sepolia."
+              : "This credential ID is registered and not revoked. Add the original PDF to compare the document itself."
+          }
           aside={<StatusBadge status="ACTIVE" />}
         />
         <div className="px-4 pt-4 sm:px-5">
           <Alert tone="accent" title="What this proves">
-            The credential's cryptographic proof is registered on {SEPOLIA.name}. It does
-            not automatically certify every real-world claim inside the document.
+            The fingerprint was registered by the issuer wallet shown below under the
+            ProofMesh contract rules on {SEPOLIA.name} (a testnet). It does not certify the
+            real-world claims inside the document or the recipient's identity.
           </Alert>
         </div>
         <div className="mt-4">
+          {liveChain ? <ChainFields chain={liveChain} /> : null}
+          {documentMatched ? (
+            <dl>
+              <DataRow label="Uploaded hash">
+                <Mono value={uploadedHash} />
+              </DataRow>
+            </dl>
+          ) : null}
           <CredentialFields credentialId={credentialId} credential={credential} />
         </div>
         <ResultActions onRetry={onRetry} credential={credential} />
@@ -227,11 +274,11 @@ export function VerificationResultView({
           </Alert>
         </div>
         <dl>
-          <DataRow label="Registered hash">
-            <Mono value={credential?.documentHash} />
+          <DataRow label="Registered hash (on-chain)">
+            <Mono value={liveChain?.documentHash ?? credential?.documentHash} />
           </DataRow>
           <DataRow label="Uploaded hash">
-            <Mono value={null} />
+            <Mono value={uploadedHash} />
           </DataRow>
         </dl>
         <ResultActions onRetry={onRetry} credential={credential} />

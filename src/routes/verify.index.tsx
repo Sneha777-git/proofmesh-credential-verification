@@ -17,6 +17,7 @@ import {
 } from "@/components/pm/verification";
 import { CREDENTIAL_ID_PATTERN } from "@/lib/proofmesh";
 import { useVerifyRecord } from "@/lib/use-verify";
+import { sha256File } from "@/lib/web3/config";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/verify/")({
@@ -53,27 +54,33 @@ function VerifyPage() {
   const [idError, setIdError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [qrFile, setQrFile] = useState<File | null>(null);
-  const { outcome, setOutcome, credential, message, run: lookup } = useVerifyRecord();
+  const { outcome, setOutcome, credential, chain, uploadedHash, message, run: lookup } = useVerifyRecord();
   const [previewMessage, setPreviewMessage] = useState<string | undefined>(undefined);
 
-  function run() {
+  async function run() {
     setPreviewMessage(undefined);
-    if (method === "id") {
-      const id = credentialId.trim().toUpperCase();
-      if (!CREDENTIAL_ID_PATTERN.test(id)) {
-        setIdError("Use the format PM-000001.");
-        return;
-      }
-      setIdError(null);
-      void lookup(id, "credential_id");
+    if (method === "qr") {
+      setOutcome("error");
+      setPreviewMessage("QR decoding is not enabled yet. Enter the credential ID printed under the code instead.");
       return;
     }
-    setOutcome("error");
-    setPreviewMessage(
-      method === "qr"
-        ? "QR decoding is not enabled yet. Enter the credential ID printed under the code instead."
-        : "Document hashing and comparison arrive with the blockchain phase. Look up the credential ID for now.",
-    );
+    const id = credentialId.trim().toUpperCase();
+    if (!CREDENTIAL_ID_PATTERN.test(id)) {
+      setIdError("Use the format PM-000001.");
+      return;
+    }
+    setIdError(null);
+    if (method === "document") {
+      if (!file) {
+        setOutcome("error");
+        setPreviewMessage("Choose the original PDF to compare its fingerprint.");
+        return;
+      }
+      const hash = await sha256File(file);
+      void lookup(id, "document", hash);
+      return;
+    }
+    void lookup(id, "credential_id");
   }
 
   return (
@@ -115,7 +122,7 @@ function VerifyPage() {
                 {METHODS.find((m) => m.key === method)?.hint}
               </p>
 
-              {method === "id" ? (
+              {method === "id" || method === "document" ? (
                 <Field
                   label="Credential ID"
                   mono
@@ -154,16 +161,15 @@ function VerifyPage() {
                   label="Credential PDF"
                   file={file}
                   onFileChange={setFile}
-                  hint="The file is hashed with SHA-256 in your browser and compared with the registered hash. It is not uploaded in this phase."
+                  hint="Hashed with SHA-256 in your browser; only the fingerprint is compared with the on-chain value. The file never leaves your device."
                 />
               ) : null}
 
-              <Button variant="primary" className="w-full" onClick={run}>
+              <Button variant="primary" className="w-full" onClick={() => void run()}>
                 Verify
               </Button>
               <p className="text-xs text-muted-foreground">
-                ID lookup checks the ProofMesh registry record. On-chain proof checking is
-                not connected yet, so results never claim blockchain verification.
+                Reads the ProofMesh contract on Ethereum Sepolia Testnet. No wallet needed.
               </p>
             </div>
           </Panel>
@@ -197,8 +203,10 @@ function VerifyPage() {
         <div className="space-y-6">
           <VerificationResultView
             outcome={outcome}
-            credentialId={method === "id" ? credentialId.toUpperCase() || undefined : undefined}
+            credentialId={method !== "qr" ? credentialId.toUpperCase() || undefined : undefined}
             credential={previewMessage ? null : credential}
+            chain={previewMessage ? null : chain}
+            uploadedHash={previewMessage ? null : uploadedHash}
             message={previewMessage ?? message}
             onRetry={() => setOutcome("idle")}
           />
