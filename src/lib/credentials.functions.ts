@@ -13,7 +13,7 @@ import {
   walletAddressSchema,
 } from "./validation";
 
-function safeParse<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, input: unknown): T | null {
+function safeParse<S extends z.ZodTypeAny>(schema: S, input: unknown): z.output<S> | null {
   const parsed = schema.safeParse(input);
   return parsed.success ? parsed.data : null;
 }
