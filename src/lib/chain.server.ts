@@ -1,21 +1,11 @@
 import { getAddress, parseEventLogs, type Hex } from "viem";
 
+import type { ChainState } from "./proofmesh";
 import { credentialRegistryAbi } from "./web3/abi";
 import { CONTRACT_ADDRESS, DEPLOY_BLOCK, PUBLIC_RPC_URL, formatCredentialId, isContractConfigured } from "./web3/config";
 import { makePublicClient, readCredential, readIsAuthorizedIssuer, readVerify } from "./web3/contract";
 
-export interface ChainState {
-  configured: boolean;
-  available: boolean;
-  exists: boolean;
-  documentHash: Hex | null;
-  issuer: string | null;
-  issuerAuthorized: boolean | null;
-  issuedAt: string | null;
-  credentialType: string | null;
-  revoked: boolean;
-  hashMatches: boolean | null;
-}
+export type { ChainState };
 
 /** Server-side reads use the private SEPOLIA_RPC_URL when set; else a public RPC. */
 export function chainClient() {
