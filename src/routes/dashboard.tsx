@@ -14,6 +14,7 @@ import {
 } from "@/components/pm/primitives";
 import { Container, PageHeader, WalletButton } from "@/components/pm/site";
 import { formatDate } from "@/components/pm/verification";
+import { RevokeAction } from "@/components/pm/web3";
 import { fetchRegistryOverview } from "@/lib/credentials.functions";
 import { truncateMiddle } from "@/lib/proofmesh";
 
@@ -147,9 +148,9 @@ function DashboardPage() {
                             <Button size="sm" variant="ghost">Verify</Button>
                           </Link>
                           <CopyButton value={`/verify/${credential.credentialId}`} label="verification URL" />
-                          <Button size="sm" variant="danger" disabled title="Revocation requires a signed-in authorized issuer">
-                            Revoke
-                          </Button>
+                          {credential.status === "ACTIVE" ? (
+                            <RevokeAction credentialId={credential.credentialId} issuerWallet={credential.issuerWallet} />
+                          ) : null}
                         </div>
                       </td>
                     </tr>
