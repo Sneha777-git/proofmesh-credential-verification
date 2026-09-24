@@ -17,6 +17,7 @@ import {
 } from "@/components/pm/verification";
 import { CREDENTIAL_ID_PATTERN } from "@/lib/proofmesh";
 import { useVerifyRecord } from "@/lib/use-verify";
+import { sha256File } from "@/lib/web3/config";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/verify/")({
@@ -202,8 +203,10 @@ function VerifyPage() {
         <div className="space-y-6">
           <VerificationResultView
             outcome={outcome}
-            credentialId={method === "id" ? credentialId.toUpperCase() || undefined : undefined}
+            credentialId={method !== "qr" ? credentialId.toUpperCase() || undefined : undefined}
             credential={previewMessage ? null : credential}
+            chain={previewMessage ? null : chain}
+            uploadedHash={previewMessage ? null : uploadedHash}
             message={previewMessage ?? message}
             onRetry={() => setOutcome("idle")}
           />
