@@ -10,33 +10,128 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as IssueRouteImport } from './routes/issue'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as CredentialsCredentialIdRouteImport } from './routes/credentials.$credentialId'
+import { Route as VerifyIndexRouteImport } from './routes/verify.index'
+import { Route as VerifyCredentialIdRouteImport } from './routes/verify.$credentialId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IssueRoute = IssueRouteImport.update({
+  id: '/issue',
+  path: '/issue',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CredentialsCredentialIdRoute = CredentialsCredentialIdRouteImport.update({
+  id: '/credentials/$credentialId',
+  path: '/credentials/$credentialId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyIndexRoute = VerifyIndexRouteImport.update({
+  id: '/verify/',
+  path: '/verify/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyCredentialIdRoute = VerifyCredentialIdRouteImport.update({
+  id: '/verify/$credentialId',
+  path: '/verify/$credentialId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/dashboard': typeof DashboardRoute
+  '/issue': typeof IssueRoute
+  '/settings': typeof SettingsRoute
+  '/credentials/$credentialId': typeof CredentialsCredentialIdRoute
+  '/verify/$credentialId': typeof VerifyCredentialIdRoute
+  '/verify/': typeof VerifyIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/dashboard': typeof DashboardRoute
+  '/issue': typeof IssueRoute
+  '/settings': typeof SettingsRoute
+  '/credentials/$credentialId': typeof CredentialsCredentialIdRoute
+  '/verify/$credentialId': typeof VerifyCredentialIdRoute
+  '/verify': typeof VerifyIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/dashboard': typeof DashboardRoute
+  '/issue': typeof IssueRoute
+  '/settings': typeof SettingsRoute
+  '/credentials/$credentialId': typeof CredentialsCredentialIdRoute
+  '/verify/$credentialId': typeof VerifyCredentialIdRoute
+  '/verify/': typeof VerifyIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/dashboard'
+    | '/issue'
+    | '/settings'
+    | '/credentials/$credentialId'
+    | '/verify/$credentialId'
+    | '/verify/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/about'
+    | '/dashboard'
+    | '/issue'
+    | '/settings'
+    | '/credentials/$credentialId'
+    | '/verify/$credentialId'
+    | '/verify'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/dashboard'
+    | '/issue'
+    | '/settings'
+    | '/credentials/$credentialId'
+    | '/verify/$credentialId'
+    | '/verify/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  DashboardRoute: typeof DashboardRoute
+  IssueRoute: typeof IssueRoute
+  SettingsRoute: typeof SettingsRoute
+  CredentialsCredentialIdRoute: typeof CredentialsCredentialIdRoute
+  VerifyCredentialIdRoute: typeof VerifyCredentialIdRoute
+  VerifyIndexRoute: typeof VerifyIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +143,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/issue': {
+      id: '/issue'
+      path: '/issue'
+      fullPath: '/issue'
+      preLoaderRoute: typeof IssueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/credentials/$credentialId': {
+      id: '/credentials/$credentialId'
+      path: '/credentials/$credentialId'
+      fullPath: '/credentials/$credentialId'
+      preLoaderRoute: typeof CredentialsCredentialIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify/': {
+      id: '/verify/'
+      path: '/verify'
+      fullPath: '/verify/'
+      preLoaderRoute: typeof VerifyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify/$credentialId': {
+      id: '/verify/$credentialId'
+      path: '/verify/$credentialId'
+      fullPath: '/verify/$credentialId'
+      preLoaderRoute: typeof VerifyCredentialIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  DashboardRoute: DashboardRoute,
+  IssueRoute: IssueRoute,
+  SettingsRoute: SettingsRoute,
+  CredentialsCredentialIdRoute: CredentialsCredentialIdRoute,
+  VerifyCredentialIdRoute: VerifyCredentialIdRoute,
+  VerifyIndexRoute: VerifyIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
