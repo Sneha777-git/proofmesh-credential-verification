@@ -1,9 +1,8 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 
-import type { ChainState } from "./chain.server";
 import { verifyCredentialRecord } from "./credentials.functions";
-import type { Credential, VerificationOutcome, VerificationType } from "./proofmesh";
+import type { ChainState, Credential, VerificationOutcome, VerificationType } from "./proofmesh";
 
 /**
  * Public verification: reads the contract on Sepolia (source of truth) server-side,
