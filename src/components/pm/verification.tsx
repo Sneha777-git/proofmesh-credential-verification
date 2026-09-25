@@ -128,9 +128,6 @@ function ResultActions({
           </Link>
         </>
       ) : null}
-      <Button size="sm" disabled title="Available in a later phase">
-        Download report
-      </Button>
     </div>
   );
 }
