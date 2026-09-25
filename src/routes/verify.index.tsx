@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { QrCode, ScanLine } from "lucide-react";
+import { QrCode } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -16,7 +16,9 @@ import {
   VerificationResultView,
 } from "@/components/pm/verification";
 import { CREDENTIAL_ID_PATTERN } from "@/lib/proofmesh";
+import { validatePdfFile } from "@/lib/pdf";
 import { useVerifyRecord } from "@/lib/use-verify";
+import { decodeQrImage } from "@/components/pm/qr";
 import { sha256File } from "@/lib/web3/config";
 import { cn } from "@/lib/utils";
 
@@ -60,8 +62,19 @@ function VerifyPage() {
   async function run() {
     setPreviewMessage(undefined);
     if (method === "qr") {
-      setOutcome("error");
-      setPreviewMessage("QR decoding is not enabled yet. Enter the credential ID printed under the code instead.");
+      if (!qrFile) {
+        setOutcome("error");
+        setPreviewMessage("Upload a photo or screenshot of the QR code.");
+        return;
+      }
+      const decoded = await decodeQrImage(qrFile).catch(() => null);
+      if (!decoded) {
+        setOutcome("error");
+        setPreviewMessage("No ProofMesh verification link was found in that image. Try a sharper photo, or enter the credential ID.");
+        return;
+      }
+      setCredentialId(decoded);
+      void lookup(decoded, "qr");
       return;
     }
     const id = credentialId.trim().toUpperCase();
@@ -76,7 +89,18 @@ function VerifyPage() {
         setPreviewMessage("Choose the original PDF to compare its fingerprint.");
         return;
       }
-      const hash = await sha256File(file);
+      const check = await validatePdfFile(file);
+      if (!check.ok) {
+        setOutcome("error");
+        setPreviewMessage(check.message);
+        return;
+      }
+      const hash = await sha256File(file).catch(() => null);
+      if (!hash) {
+        setOutcome("error");
+        setPreviewMessage("The file could not be fingerprinted. Try selecting it again.");
+        return;
+      }
       void lookup(id, "document", hash);
       return;
     }
@@ -139,12 +163,9 @@ function VerifyPage() {
                   <div className="flex flex-col items-center gap-3 rounded-sm border border-dashed border-border-strong bg-surface/60 p-6 text-center">
                     <QrCode className="h-6 w-6 text-subtle" aria-hidden />
                     <p className="text-sm text-subtle">
-                      Camera scanning is not enabled in this phase.
+                      On a phone, point your camera app at the code — it opens the public
+                      verification page directly. On desktop, upload an image of the code below.
                     </p>
-                    <Button size="sm" disabled>
-                      <ScanLine className="h-3.5 w-3.5" aria-hidden />
-                      Open scanner
-                    </Button>
                   </div>
                   <FileUpload
                     label="Or upload a QR image"
@@ -176,8 +197,8 @@ function VerifyPage() {
 
           <Panel>
             <PanelHeader
-              title="Result states"
-              description="Preview the layouts this page renders. These are UI states, not verification results."
+              title="Demo mode — result layouts"
+              description="Shows how each result is laid out. Clearly marked DEMO MODE; never real verification results or blockchain data."
             />
             <div className="flex flex-wrap gap-2 p-4 sm:p-5">
               {OUTCOME_PREVIEWS.map((item) => (
@@ -186,7 +207,7 @@ function VerifyPage() {
                   size="sm"
                   variant={outcome === item.outcome ? "primary" : "outline"}
                   onClick={() => {
-                    setPreviewMessage("Layout preview only — no lookup was performed.");
+                    setPreviewMessage("DEMO MODE — layout preview only. No lookup was performed and nothing shown here is real data.");
                     setOutcome(item.outcome);
                   }}
                 >

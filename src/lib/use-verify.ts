@@ -32,9 +32,13 @@ export function useVerifyRecord() {
         setOutcome("error");
         return;
       }
-      const { chain: c, credential: record, result } = res.data;
+      const { chain: c, credential: record, result, indexStale } = res.data;
       setCredential(record);
       setChain(c);
+      if (indexStale)
+        setMessage(
+          "The ProofMesh database index is out of date and could not be refreshed. The result below follows the blockchain, which is authoritative.",
+        );
 
       if (c.configured && c.available) {
         if (!c.exists) return setOutcome("not_found");

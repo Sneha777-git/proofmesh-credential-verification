@@ -134,7 +134,9 @@ export interface ChainState {
 
 /** Transaction progress shown on the Issue page. Success only after a mined receipt. */
 export const TX_STEPS = [
+  "FILE VALIDATED",
   "FILE HASHED",
+  "IPFS UPLOADED",
   "PREPARING",
   "WAITING FOR WALLET",
   "TRANSACTION SUBMITTED",

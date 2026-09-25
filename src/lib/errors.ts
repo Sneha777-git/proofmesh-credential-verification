@@ -6,7 +6,8 @@ export type AppErrorCode =
   | "forbidden_issuer"
   | "duplicate"
   | "constraint"
-  | "unavailable";
+  | "unavailable"
+  | "rate_limited";
 
 export const APP_ERROR_MESSAGES: Record<AppErrorCode, string> = {
   invalid_input: "Some of the submitted data is invalid.",
@@ -16,6 +17,7 @@ export const APP_ERROR_MESSAGES: Record<AppErrorCode, string> = {
   duplicate: "A credential with this ID or document hash already exists.",
   constraint: "The change was rejected by the registry rules.",
   unavailable: "The credential registry is temporarily unavailable.",
+  rate_limited: "Too many verification requests. Wait a minute and try again.",
 };
 
 export type AppResult<T> = { ok: true; data: T } | { ok: false; code: AppErrorCode; message: string };

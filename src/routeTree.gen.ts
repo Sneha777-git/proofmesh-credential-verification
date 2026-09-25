@@ -17,6 +17,8 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as CredentialsCredentialIdRouteImport } from './routes/credentials.$credentialId'
 import { Route as VerifyIndexRouteImport } from './routes/verify.index'
 import { Route as VerifyCredentialIdRouteImport } from './routes/verify.$credentialId'
+import { Route as ApiPublicIpfsPinRouteImport } from './routes/api/public/ipfs-pin'
+import { Route as ApiPublicVerifyRouteImport } from './routes/api/public/verify'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +60,16 @@ const VerifyCredentialIdRoute = VerifyCredentialIdRouteImport.update({
   path: '/verify/$credentialId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicIpfsPinRoute = ApiPublicIpfsPinRouteImport.update({
+  id: '/api/public/ipfs-pin',
+  path: '/api/public/ipfs-pin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicVerifyRoute = ApiPublicVerifyRouteImport.update({
+  id: '/api/public/verify',
+  path: '/api/public/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +80,8 @@ export interface FileRoutesByFullPath {
   '/credentials/$credentialId': typeof CredentialsCredentialIdRoute
   '/verify/$credentialId': typeof VerifyCredentialIdRoute
   '/verify/': typeof VerifyIndexRoute
+  '/api/public/ipfs-pin': typeof ApiPublicIpfsPinRoute
+  '/api/public/verify': typeof ApiPublicVerifyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +92,8 @@ export interface FileRoutesByTo {
   '/credentials/$credentialId': typeof CredentialsCredentialIdRoute
   '/verify/$credentialId': typeof VerifyCredentialIdRoute
   '/verify': typeof VerifyIndexRoute
+  '/api/public/ipfs-pin': typeof ApiPublicIpfsPinRoute
+  '/api/public/verify': typeof ApiPublicVerifyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +105,8 @@ export interface FileRoutesById {
   '/credentials/$credentialId': typeof CredentialsCredentialIdRoute
   '/verify/$credentialId': typeof VerifyCredentialIdRoute
   '/verify/': typeof VerifyIndexRoute
+  '/api/public/ipfs-pin': typeof ApiPublicIpfsPinRoute
+  '/api/public/verify': typeof ApiPublicVerifyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +119,8 @@ export interface FileRouteTypes {
     | '/credentials/$credentialId'
     | '/verify/$credentialId'
     | '/verify/'
+    | '/api/public/ipfs-pin'
+    | '/api/public/verify'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +131,8 @@ export interface FileRouteTypes {
     | '/credentials/$credentialId'
     | '/verify/$credentialId'
     | '/verify'
+    | '/api/public/ipfs-pin'
+    | '/api/public/verify'
   id:
     | '__root__'
     | '/'
@@ -121,6 +143,8 @@ export interface FileRouteTypes {
     | '/credentials/$credentialId'
     | '/verify/$credentialId'
     | '/verify/'
+    | '/api/public/ipfs-pin'
+    | '/api/public/verify'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,6 +156,8 @@ export interface RootRouteChildren {
   CredentialsCredentialIdRoute: typeof CredentialsCredentialIdRoute
   VerifyCredentialIdRoute: typeof VerifyCredentialIdRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
+  ApiPublicIpfsPinRoute: typeof ApiPublicIpfsPinRoute
+  ApiPublicVerifyRoute: typeof ApiPublicVerifyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,6 +218,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyCredentialIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ipfs-pin': {
+      id: '/api/public/ipfs-pin'
+      path: '/api/public/ipfs-pin'
+      fullPath: '/api/public/ipfs-pin'
+      preLoaderRoute: typeof ApiPublicIpfsPinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/verify': {
+      id: '/api/public/verify'
+      path: '/api/public/verify'
+      fullPath: '/api/public/verify'
+      preLoaderRoute: typeof ApiPublicVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -204,6 +244,8 @@ const rootRouteChildren: RootRouteChildren = {
   CredentialsCredentialIdRoute: CredentialsCredentialIdRoute,
   VerifyCredentialIdRoute: VerifyCredentialIdRoute,
   VerifyIndexRoute: VerifyIndexRoute,
+  ApiPublicIpfsPinRoute: ApiPublicIpfsPinRoute,
+  ApiPublicVerifyRoute: ApiPublicVerifyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
