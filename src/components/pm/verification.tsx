@@ -106,9 +106,18 @@ function ResultActions({
           <ExternalLink className="h-3 w-3" aria-hidden />
         </Button>
       )}
-      <Button size="sm" disabled title="Available once the document is stored on IPFS">
-        View IPFS
-      </Button>
+      {credential?.ipfsCid ? (
+        <a href={`https://gateway.pinata.cloud/ipfs/${credential.ipfsCid}`} target="_blank" rel="noreferrer">
+          <Button size="sm">
+            View IPFS
+            <ExternalLink className="h-3 w-3" aria-hidden />
+          </Button>
+        </a>
+      ) : (
+        <Button size="sm" disabled title="No IPFS copy is recorded for this credential">
+          View IPFS
+        </Button>
+      )}
       {credential ? (
         <>
           <CopyButton value={credential.credentialId} label="credential ID" />
