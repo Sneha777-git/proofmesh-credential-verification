@@ -8,7 +8,7 @@ export async function pinPdfToIpfs(bytes: Uint8Array, name: string, documentHash
   const jwt = process.env["PINATA_JWT"];
   if (!jwt) throw new Error("ipfs_not_configured");
   const form = new FormData();
-  form.append("file", new Blob([bytes], { type: "application/pdf" }), name.replace(/[^\w.\-]/g, "_").slice(0, 80));
+  form.append("file", new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "application/pdf" }), name.replace(/[^\w.\-]/g, "_").slice(0, 80));
   form.append("pinataMetadata", JSON.stringify({ name: `proofmesh-${documentHash.slice(2, 14)}`, keyvalues: { sha256: documentHash } }));
   form.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
   const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
