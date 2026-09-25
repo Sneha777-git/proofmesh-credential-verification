@@ -176,8 +176,8 @@ function VerifyPage() {
 
           <Panel>
             <PanelHeader
-              title="Result states"
-              description="Preview the layouts this page renders. These are UI states, not verification results."
+              title="Demo mode — result layouts"
+              description="Shows how each result is laid out. Clearly marked DEMO MODE; never real verification results or blockchain data."
             />
             <div className="flex flex-wrap gap-2 p-4 sm:p-5">
               {OUTCOME_PREVIEWS.map((item) => (
@@ -186,7 +186,7 @@ function VerifyPage() {
                   size="sm"
                   variant={outcome === item.outcome ? "primary" : "outline"}
                   onClick={() => {
-                    setPreviewMessage("Layout preview only — no lookup was performed.");
+                    setPreviewMessage("DEMO MODE — layout preview only. No lookup was performed and nothing shown here is real data.");
                     setOutcome(item.outcome);
                   }}
                 >
