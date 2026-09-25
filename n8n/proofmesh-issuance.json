@@ -1,0 +1,60 @@
+{
+  "name": "ProofMesh — Issuance pipeline",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "proofmesh", "responseMode": "responseNode", "options": { "rawBody": true } },
+      "id": "webhook", "name": "Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate request: HMAC-SHA256 of the raw body with N8N_WEBHOOK_SECRET (set as an n8n env var).\nconst crypto = require('crypto');\nconst item = $input.first();\nconst raw = item.binary?.data ? Buffer.from(item.binary.data.data, 'base64').toString('utf8') : JSON.stringify(item.json.body);\nconst sig = item.json.headers['x-proofmesh-signature'] || '';\nconst expected = crypto.createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(raw).digest('hex');\nif (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {\n  throw new Error('invalid_signature');\n}\nconst body = JSON.parse(raw);\nconst allowed = ['document.pinned', 'credential.registered', 'credential.revoked', 'verification.completed'];\nif (!allowed.includes(body.event)) throw new Error('unknown_event');\n// Reject anything that looks like key material — n8n must never see keys.\nif (/private|seed|mnemonic/i.test(raw)) throw new Error('forbidden_field');\nreturn [{ json: body }];"
+      },
+      "id": "validate", "name": "Validate request", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "rules": { "values": [
+          { "conditions": { "conditions": [{ "leftValue": "={{ $json.event }}", "rightValue": "document.pinned", "operator": { "type": "string", "operation": "equals" } }] }, "outputKey": "ipfs" },
+          { "conditions": { "conditions": [{ "leftValue": "={{ $json.event }}", "rightValue": "credential.", "operator": { "type": "string", "operation": "startsWith" } }] }, "outputKey": "chain" },
+          { "conditions": { "conditions": [{ "leftValue": "={{ $json.event }}", "rightValue": "verification.completed", "operator": { "type": "string", "operation": "equals" } }] }, "outputKey": "verification" }
+        ] }
+      },
+      "id": "route", "name": "Process credential data", "type": "n8n-nodes-base.switch", "typeVersion": 3, "position": [440, 0]
+    },
+    {
+      "parameters": { "method": "HEAD", "url": "=https://gateway.pinata.cloud/ipfs/{{ $json.payload.cid }}", "options": { "timeout": 20000 } },
+      "id": "ipfs", "name": "IPFS availability check", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4, "position": [680, -160], "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST", "url": "={{ $env.PROOFMESH_APP_URL }}/api/public/verify",
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ credentialId: $json.payload.credentialId, documentHash: $json.payload.documentHash, type: 'credential_id' }) }}"
+      },
+      "id": "chain", "name": "Blockchain coordination (confirm on-chain state)", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4, "position": [680, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Supabase update check: the app already mirrored chain state; flag any disagreement.\nconst r = $input.first().json;\nreturn [{ json: { credentialId: r.credentialId, verdict: r.verdict, indexStale: r.indexStale, ipfsCid: r.record?.ipfsCid ?? null, tx: r.record?.transactionHash ?? null } }];"
+      },
+      "id": "meta", "name": "Prepare metadata / Supabase check", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [900, 0]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { ok: true, received: true } }}" },
+      "id": "respond", "name": "Return result", "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1, "position": [1120, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Validate request", "type": "main", "index": 0 }]] },
+    "Validate request": { "main": [[{ "node": "Process credential data", "type": "main", "index": 0 }]] },
+    "Process credential data": { "main": [
+      [{ "node": "IPFS availability check", "type": "main", "index": 0 }],
+      [{ "node": "Blockchain coordination (confirm on-chain state)", "type": "main", "index": 0 }],
+      [{ "node": "Return result", "type": "main", "index": 0 }]
+    ] },
+    "IPFS availability check": { "main": [[{ "node": "Return result", "type": "main", "index": 0 }]] },
+    "Blockchain coordination (confirm on-chain state)": { "main": [[{ "node": "Prepare metadata / Supabase check", "type": "main", "index": 0 }]] },
+    "Prepare metadata / Supabase check": { "main": [[{ "node": "Return result", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
