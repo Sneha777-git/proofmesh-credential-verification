@@ -45,7 +45,7 @@ export const verifyCredentialRecord = createServerFn({ method: "POST" })
     async ({
       data,
     }): Promise<
-      AppResult<{ result: VerificationResultCode; credential: Credential | null; chain: ChainState }>
+      AppResult<{ result: VerificationResultCode; credential: Credential | null; chain: ChainState; indexStale: boolean }>
     > => {
       const parsed = safeParse(
         z.object({
@@ -56,6 +56,8 @@ export const verifyCredentialRecord = createServerFn({ method: "POST" })
         data,
       );
       if (!parsed) return fail("invalid_input");
+      const { rateLimit, dispatchToN8n } = await import("./integrations.server");
+      if (!(await rateLimit("verify", 60, 60))) return fail("rate_limited");
       try {
         const chainMod = await import("./chain.server");
         const { parseCredentialId } = await import("./web3/config");
@@ -80,10 +82,19 @@ export const verifyCredentialRecord = createServerFn({ method: "POST" })
         }
         const recorded = await svc.createVerificationEvent(db, parsed.credentialId, parsed.type);
         const result: VerificationResultCode = recorded.ok ? recorded.data : "not_found";
-        return {
-          ok: true,
-          data: { result, credential: credential.ok ? credential.data : null, chain },
-        };
+        const record = credential.ok ? credential.data : null;
+        // Flag, never hide, a database index that disagrees with confirmed chain state.
+        const indexStale = Boolean(
+          chain.exists && (!record || record.status !== (chain.revoked ? "REVOKED" : "ACTIVE")),
+        );
+        void dispatchToN8n("verification.completed", {
+          credentialId: parsed.credentialId,
+          type: parsed.type,
+          onChain: chain.exists,
+          revoked: chain.revoked,
+          hashMatches: chain.hashMatches,
+        });
+        return { ok: true, data: { result, credential: record, chain, indexStale } };
       } catch (error) {
         console.error("[verify]", error instanceof Error ? error.message : error);
         return fail("unavailable");
@@ -191,3 +202,15 @@ export const fetchVerificationHistory = createServerFn({ method: "GET" })
     const svc = await import("./credentials.server");
     return svc.getVerificationHistory(context.supabase, id);
   });
+
+/** Which integrations are configured on the server. Booleans only — never values. */
+export const fetchIntegrationStatus = createServerFn({ method: "GET" }).handler(async () => {
+  const { ipfsConfigured, n8nConfigured } = await import("./integrations.server");
+  const { isContractConfigured } = await import("./web3/config");
+  return {
+    contract: isContractConfigured(),
+    ipfs: ipfsConfigured(),
+    n8n: n8nConfigured(),
+    privateRpc: Boolean(process.env["SEPOLIA_RPC_URL"]),
+  };
+});

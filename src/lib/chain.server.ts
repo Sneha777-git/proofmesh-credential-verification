@@ -122,7 +122,14 @@ export async function syncCredentialFromChain(id: bigint, txHint?: Hex) {
     });
   }
 
+  const { data: pin } = await supabaseAdmin
+    .from("document_pins")
+    .select("ipfs_cid")
+    .eq("document_hash", c.documentHash.toLowerCase())
+    .maybeSingle();
+
   const row = {
+    ...(pin ? { ipfs_cid: pin.ipfs_cid } : {}),
     credential_id: formatCredentialId(id),
     issuer_wallet: issuerWallet,
     credential_type: c.credentialType as "Academic",
@@ -136,5 +143,15 @@ export async function syncCredentialFromChain(id: bigint, txHint?: Hex) {
     console.error("[sync] upsert failed", error.code, error.message);
     return { ok: false as const, reason: "db_error" };
   }
+  const { dispatchToN8n } = await import("./integrations.server");
+  void dispatchToN8n(c.revoked ? "credential.revoked" : "credential.registered", {
+    credentialId: row.credential_id,
+    issuerWallet,
+    documentHash: row.document_hash,
+    ipfsCid: pin?.ipfs_cid ?? null,
+    transactionHash,
+    blockNumber: blockNumber === null ? null : Number(blockNumber),
+    status: row.status,
+  });
   return { ok: true as const };
 }
