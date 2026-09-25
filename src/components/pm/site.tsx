@@ -180,7 +180,7 @@ export function SiteFooter() {
           <p className="font-mono text-sm tracking-[0.2em] text-foreground">PROOFMESH</p>
           <p className="mt-3 max-w-sm text-sm text-subtle">
             Independent verification of credential proofs anchored to a public
-            blockchain. Frontend foundation — on-chain registration is not live yet.
+            blockchain. Ethereum Sepolia Testnet — proofs show registration, not the truth of claims.
           </p>
         </div>
         <div>
