@@ -70,6 +70,30 @@ export type Database = {
           },
         ]
       }
+      document_pins: {
+        Row: {
+          created_at: string
+          document_hash: string
+          ipfs_cid: string
+          pinned_by: string
+          size_bytes: number
+        }
+        Insert: {
+          created_at?: string
+          document_hash: string
+          ipfs_cid: string
+          pinned_by: string
+          size_bytes: number
+        }
+        Update: {
+          created_at?: string
+          document_hash?: string
+          ipfs_cid?: string
+          pinned_by?: string
+          size_bytes?: number
+        }
+        Relationships: []
+      }
       issuers: {
         Row: {
           authorization_status: Database["public"]["Enums"]["issuer_authorization"]
@@ -94,6 +118,24 @@ export type Database = {
           issuer_name?: string
           updated_at?: string
           wallet_address?: string
+        }
+        Relationships: []
+      }
+      rate_limits: {
+        Row: {
+          bucket: string
+          hits: number
+          window_start: string
+        }
+        Insert: {
+          bucket: string
+          hits?: number
+          window_start: string
+        }
+        Update: {
+          bucket?: string
+          hits?: number
+          window_start?: string
         }
         Relationships: []
       }
@@ -181,6 +223,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      hit_rate_limit: {
+        Args: { _bucket: string; _limit: number; _window_seconds: number }
         Returns: boolean
       }
       is_authorized_issuer: {

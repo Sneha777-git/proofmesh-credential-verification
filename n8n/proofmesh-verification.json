@@ -1,0 +1,39 @@
+{
+  "name": "ProofMesh — Verification pipeline",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "proofmesh-verify", "responseMode": "responseNode" },
+      "id": "webhook", "name": "Verification request", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body || {};\nconst id = String(b.credentialId || '').trim().toUpperCase();\nif (!/^PM-\\d{6}$/.test(id)) throw new Error('invalid_credential_id');\nconst hash = b.documentHash ? String(b.documentHash).toLowerCase() : undefined;\nif (hash && !/^(0x)?[0-9a-f]{64}$/.test(hash)) throw new Error('invalid_document_hash');\nconst type = ['qr', 'document'].includes(b.type) ? b.type : 'credential_id';\nreturn [{ json: { credentialId: id, documentHash: hash, type } }];"
+      },
+      "id": "validate", "name": "Validate input", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST", "url": "={{ $env.PROOFMESH_APP_URL }}/api/public/verify",
+        "sendBody": true, "specifyBody": "json", "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "lookup", "name": "Credential + blockchain lookup, status, hash compare, event", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4, "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nreturn [{ json: { verdict: r.verdict, credentialId: r.credentialId, network: r.network, revoked: r.chain?.revoked ?? null, hashMatches: r.chain?.hashMatches ?? null, issuer: r.chain?.issuer ?? null, note: r.note } }];"
+      },
+      "id": "shape", "name": "Verification result", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [660, 0]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ $json }}" },
+      "id": "respond", "name": "Response", "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1, "position": [880, 0]
+    }
+  ],
+  "connections": {
+    "Verification request": { "main": [[{ "node": "Validate input", "type": "main", "index": 0 }]] },
+    "Validate input": { "main": [[{ "node": "Credential + blockchain lookup, status, hash compare, event", "type": "main", "index": 0 }]] },
+    "Credential + blockchain lookup, status, hash compare, event": { "main": [[{ "node": "Verification result", "type": "main", "index": 0 }]] },
+    "Verification result": { "main": [[{ "node": "Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

@@ -18,6 +18,7 @@ import {
 } from "@/components/pm/primitives";
 import { Container, PageHeader } from "@/components/pm/site";
 import { CredentialFields, formatDate } from "@/components/pm/verification";
+import { CredentialQr } from "@/components/pm/qr";
 import { RevokeAction } from "@/components/pm/web3";
 import { fetchCredential } from "@/lib/credentials.functions";
 import { SEPOLIA } from "@/lib/proofmesh";
@@ -106,9 +107,9 @@ function CredentialDetailPage() {
             </Panel>
           ) : (
             <>
-              <Alert tone="info" title="Database record, not blockchain proof">
-                These values come from the ProofMesh registry. On-chain proof checking is
-                not connected yet; empty fields stay empty until real values exist.
+              <Alert tone="info" title="Database index">
+                These values come from the ProofMesh index, which mirrors confirmed Sepolia
+                state. Use Verify for a live blockchain check. Empty fields stay empty.
               </Alert>
               <Panel>
                 <PanelHeader title="Credential" aside={<StatusBadge status={credential.status} />} />
@@ -142,14 +143,7 @@ function CredentialDetailPage() {
                   <MonoValue value={verificationPath} copyLabel="verification URL" />
                 </div>
               </div>
-              {showQr ? (
-                <div className="flex flex-col items-center gap-3 rounded-sm border border-dashed border-border-strong bg-surface/60 p-6 text-center">
-                  <QrCode className="h-10 w-10 text-subtle" aria-hidden />
-                  <p className="text-sm text-subtle">
-                    QR generation arrives in a later phase. The code will encode only this public URL.
-                  </p>
-                </div>
-              ) : null}
+              {showQr ? <CredentialQr credentialId={credentialId} /> : null}
               <p className="text-xs text-muted-foreground">
                 The QR code never contains personal data — only the public verification link.
               </p>
