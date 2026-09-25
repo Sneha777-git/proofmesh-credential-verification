@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ShieldAlert } from "lucide-react";
@@ -20,7 +20,9 @@ import {
 } from "@/components/pm/primitives";
 import { Container, PageHeader, WalletButton } from "@/components/pm/site";
 import { ContractNotConfigured, TxLink, useIssuerAuthorization, usePublicClient } from "@/components/pm/web3";
-import { syncFromChain } from "@/lib/credentials.functions";
+import { CredentialQr } from "@/components/pm/qr";
+import { fetchIntegrationStatus, syncFromChain } from "@/lib/credentials.functions";
+import { pinMessage, validatePdfFile } from "@/lib/pdf";
 import { CREDENTIAL_TYPES, TX_STEPS } from "@/lib/proofmesh";
 import { CHAIN_LABEL, formatCredentialId, isContractConfigured, sha256File } from "@/lib/web3/config";
 import { registerOnChain, type TxPhase } from "@/lib/web3/contract";
@@ -71,9 +73,24 @@ function IssuePage() {
   const [result, setResult] = useState<{ credentialId: string; block: bigint } | null>(null);
   const [synced, setSynced] = useState<boolean | null>(null);
 
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [cid, setCid] = useState<string | null>(null);
+  const [ipfsState, setIpfsState] = useState<"idle" | "active" | "done" | "failed">("idle");
+  const loadStatus = useServerFn(fetchIntegrationStatus);
+  const integrations = useQuery({ queryKey: ["integrations"], queryFn: () => loadStatus() });
+
   useEffect(() => {
     setHash(null);
-    if (file) void sha256File(file).then(setHash);
+    setFileError(null);
+    setCid(null);
+    setIpfsState("idle");
+    if (!file) return;
+    void validatePdfFile(file).then(async (check) => {
+      if (!check.ok) return setFileError(check.message);
+      const h = await sha256File(file).catch(() => null);
+      if (!h) return setFileError("The file could not be fingerprinted.");
+      setHash(h);
+    });
   }, [file]);
 
   const configured = isContractConfigured();
@@ -91,9 +108,13 @@ function IssuePage() {
               ? "Could not read issuer authorization from the contract."
               : auth.data === false
                 ? "This wallet is not an authorized issuer."
-                : !hash
-                  ? "Add the credential PDF."
-                  : null;
+                : integrations.data && !integrations.data.ipfs
+                  ? "IPFS storage is not configured."
+                  : fileError
+                    ? fileError
+                    : !hash
+                      ? "Add the credential PDF."
+                      : null;
 
   const busy = phase !== null && phase !== "confirmed" && terminal === null;
 
@@ -106,6 +127,37 @@ function IssuePage() {
     setResult(null);
     setSynced(null);
     let submittedHash: Hex | undefined;
+    // 1. IPFS upload, approved by a wallet signature (no transaction, no gas).
+    let pinnedCid = cid;
+    if (!pinnedCid) {
+      setIpfsState("active");
+      try {
+        const timestamp = Date.now();
+        const signature = await walletClient.signMessage({
+          account: wallet.address,
+          message: pinMessage(hash, wallet.address, timestamp),
+        });
+        const form = new FormData();
+        form.append("file", file!);
+        form.append("wallet", wallet.address);
+        form.append("signature", signature);
+        form.append("documentHash", hash);
+        form.append("timestamp", String(timestamp));
+        const res = await fetch("/api/public/ipfs-pin", { method: "POST", body: form });
+        const body = (await res.json().catch(() => null)) as { ok?: boolean; cid?: string; message?: string } | null;
+        if (!res.ok || !body?.ok || !body.cid) throw new Error(body?.message ?? "The document could not be stored on IPFS.");
+        pinnedCid = body.cid;
+        setCid(body.cid);
+        setIpfsState("done");
+      } catch (e) {
+        setIpfsState("failed");
+        const mapped = toWeb3Error(e);
+        setTerminal(mapped.code === "rejected" ? "rejected" : "failed");
+        setError(mapped.code === "rejected" ? "You declined the upload approval in your wallet." : e instanceof Error && !/0x|viem|revert/i.test(e.message) ? e.message : mapped.message);
+        return;
+      }
+    }
+    // 2. On-chain registration signed in MetaMask.
     try {
       const out = await registerOnChain(client, walletClient, wallet.address, hash, type, (p, h) => {
         setPhase(p);
@@ -129,6 +181,8 @@ function IssuePage() {
 
   function reset() {
     setFile(null);
+    setCid(null);
+    setIpfsState("idle");
     setPhase(null);
     setTerminal(null);
     setError(null);
@@ -139,11 +193,15 @@ function IssuePage() {
 
   const states: Record<string, StepState> = {};
   for (const step of TX_STEPS) states[step] = "idle";
-  if (hash) states["FILE HASHED"] = "done";
+  if (hash) {
+    states["FILE VALIDATED"] = "done";
+    states["FILE HASHED"] = "done";
+  } else if (fileError) states["FILE VALIDATED"] = "failed";
+  if (ipfsState !== "idle") states["IPFS UPLOADED"] = ipfsState;
   if (phase) {
     const order = TX_STEPS.indexOf(PHASE_STEP[phase]);
     TX_STEPS.forEach((step, i) => {
-      if (i === 0) return;
+      if (i < 3) return;
       if (i < order) states[step] = "done";
       else if (i === order) states[step] = terminal ? "failed" : phase === "confirmed" ? "done" : "active";
     });
@@ -185,6 +243,11 @@ function IssuePage() {
               {wallet.address} is not authorized in the ProofMesh contract. The contract owner
               must authorize it first; the contract itself rejects registrations otherwise.
             </Alert>
+          ) : integrations.data && !integrations.data.ipfs ? (
+            <Alert tone="warning" title="Integration not configured — IPFS">
+              Document storage on IPFS is not set up on this server, so issuance is paused.
+              Nothing will be registered until it is.
+            </Alert>
           ) : auth.data === true ? (
             <Alert tone="accent" title="Authorized issuer">
               The contract confirms this wallet may register credentials on {CHAIN_LABEL}.
@@ -201,7 +264,7 @@ function IssuePage() {
                 label="Credential PDF"
                 file={file}
                 onFileChange={setFile}
-                hint="Hashed locally with SHA-256. The file is not uploaded in this phase — keep the exact file you register."
+                hint="Validated, fingerprinted with SHA-256 in your browser, re-checked on the server and stored on IPFS. PDF only, up to 10 MB."
               />
               {hash ? (
                 <div>
@@ -276,10 +339,14 @@ function IssuePage() {
                       <DataRow label="Block">
                         <span className="font-mono text-[0.78rem]">{result.block.toString()}</span>
                       </DataRow>
+                      <DataRow label="IPFS CID">
+                        {cid ? <MonoValue value={cid} copyLabel="IPFS CID" /> : "—"}
+                      </DataRow>
                       <DataRow label="Database index">
                         {synced === null ? "Syncing…" : synced ? "Synced" : "Not synced yet — it will sync on the next verification."}
                       </DataRow>
                     </dl>
+                    <CredentialQr credentialId={result.credentialId} />
                     <Link to="/credentials/$credentialId" params={{ credentialId: result.credentialId }}>
                       <Button size="sm">Open credential record</Button>
                     </Link>
