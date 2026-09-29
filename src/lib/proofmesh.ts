@@ -142,5 +142,4 @@ export const TX_STEPS = [
   "TRANSACTION SUBMITTED",
   "CONFIRMING",
   "CONFIRMED",
-  "DATABASE SYNCED",
 ] as const;
