@@ -1,4 +1,4 @@
-@'
+
 # ProofMesh
 
 > **Verify Trust. Prove Authenticity.**
