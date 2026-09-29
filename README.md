@@ -25,7 +25,7 @@ Instead of trusting a PDF or relying entirely on a centralized database, ProofMe
 
 ## 🧠 How ProofMesh Works
 
-```text
+
                  ┌──────────────────┐
                  │   Credential PDF │
                  └────────┬─────────┘
@@ -414,10 +414,8 @@ This project is provided for educational and demonstration purposes.
 I deliberately removed this garbage from the bottom:
 
 ```text
-'@ | Set-Content README.md
+ | Set-Content README.md
 
 and the unfinished PowerShell command:
 
 Then verify the cleanup
-
-Run:
