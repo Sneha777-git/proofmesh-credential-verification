@@ -75,27 +75,31 @@ export const Route = createFileRoute("/api/public/ipfs-pin")({
         }
         if (!authorized) return err(403, "unauthorized_issuer", "This wallet is not an authorized issuer in the contract.");
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: existing } = await supabaseAdmin
-          .from("document_pins")
-          .select("ipfs_cid")
-          .eq("document_hash", hash)
-          .maybeSingle();
-        if (existing) return json(200, { ok: true, cid: existing.ipfs_cid, documentHash: hash, reused: true });
-
         let cid: string;
         try {
           cid = await pinPdfToIpfs(bytes, file.name, hash);
         } catch {
           return err(502, "ipfs_failed", "The document could not be stored on IPFS. Try again.");
         }
-        const { error } = await supabaseAdmin.from("document_pins").upsert({
-          document_hash: hash,
-          ipfs_cid: cid,
-          pinned_by: wallet.toLowerCase(),
-          size_bytes: bytes.byteLength,
-        });
-        if (error) return err(503, "db_unavailable", "The document was stored but the registry could not be updated.");
+        try {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { error } = await supabaseAdmin.from("document_pins").upsert({
+    document_hash: hash,
+    ipfs_cid: cid,
+    pinned_by: wallet.toLowerCase(),
+    size_bytes: bytes.byteLength,
+  });
+
+  if (error) {
+    console.warn("[ipfs-pin] Supabase metadata sync failed:", error.message);
+  }
+} catch (error) {
+  console.warn(
+    "[ipfs-pin] Supabase metadata sync failed:",
+    error instanceof Error ? error.message : error,
+  );
+}
         void dispatchToN8n("document.pinned", { documentHash: hash, cid, issuerWallet: wallet.toLowerCase() });
         return json(200, { ok: true, cid, documentHash: hash, reused: false });
       },

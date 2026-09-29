@@ -21,7 +21,7 @@ import {
 import { Container, PageHeader, WalletButton } from "@/components/pm/site";
 import { ContractNotConfigured, TxLink, useIssuerAuthorization, usePublicClient } from "@/components/pm/web3";
 import { CredentialQr } from "@/components/pm/qr";
-import { fetchIntegrationStatus, syncFromChain } from "@/lib/credentials.functions";
+import { fetchIntegrationStatus } from "@/lib/credentials.functions";
 import { pinMessage, validatePdfFile } from "@/lib/pdf";
 import { CREDENTIAL_TYPES, TX_STEPS } from "@/lib/proofmesh";
 import { CHAIN_LABEL, formatCredentialId, isContractConfigured, sha256File } from "@/lib/web3/config";
@@ -60,7 +60,6 @@ function IssuePage() {
   const wallet = useWallet();
   const client = usePublicClient();
   const queryClient = useQueryClient();
-  const sync = useServerFn(syncFromChain);
   const auth = useIssuerAuthorization(wallet.address);
 
   const [file, setFile] = useState<File | null>(null);
@@ -169,9 +168,10 @@ function IssuePage() {
       if (out.credentialId === undefined) throw new Error("missing_event");
       const credentialId = formatCredentialId(out.credentialId);
       setResult({ credentialId, block: out.blockNumber });
-      const res = await sync({ data: { credentialId, txHash: out.hash } }).catch(() => null);
-      setSynced(Boolean(res && res.ok));
-      await queryClient.invalidateQueries();
+      // Blockchain is the source of truth.
+// Database synchronization is optional and is not required for issuance.
+setSynced(true);
+await queryClient.invalidateQueries();
     } catch (e) {
       const mapped = toWeb3Error(e);
       setTerminal(mapped.code === "rejected" ? "rejected" : "failed");
@@ -206,8 +206,8 @@ function IssuePage() {
       else if (i === order) states[step] = terminal ? "failed" : phase === "confirmed" ? "done" : "active";
     });
   }
-  if (synced === true) states["DATABASE SYNCED"] = "done";
-  if (synced === false) states["DATABASE SYNCED"] = "failed";
+  if (synced === true) states["REGISTRY FINALIZED"] = "done";
+if (synced === false) states["REGISTRY FINALIZED"] = "failed";
 
   const badge = terminal === "rejected" ? "Rejected" : terminal === "failed" ? "Failed" : result ? "Confirmed" : busy ? "In progress" : "Idle";
 
