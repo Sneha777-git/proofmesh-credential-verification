@@ -53,62 +53,125 @@ Instead of trusting a PDF or relying entirely on a centralized database, ProofMe
                              │    Verify       │
                              └─────────────────┘
 
-Issuance
-An issuer selects a credential PDF.
-ProofMesh calculates its SHA-256 hash.
-The document is uploaded to IPFS through Pinata.
-The credential hash is registered on Ethereum Sepolia.
-The blockchain stores the credential proof, issuer, timestamp, type, and revocation state.
-The credential can subsequently be independently verified.
-Verification
+# 🔐 ProofMesh
+
+### Decentralized Credential Verification using Blockchain, IPFS & Cryptographic Proofs
+
+ProofMesh is a Web3-based credential verification system that allows digital credentials to be issued, stored, verified, and revoked using **cryptographic hashing, IPFS, and Ethereum**.
+
+Instead of relying entirely on a centralized verification database, ProofMesh anchors a credential's cryptographic fingerprint on the blockchain, allowing its authenticity to be independently verified.
+
+---
+
+## ✨ Features
+
+- 📄 **Credential Issuance**
+- 🔐 **SHA-256 Document Hashing**
+- 🌐 **IPFS Storage**
+- ⛓️ **Ethereum Sepolia Integration**
+- 🦊 **MetaMask Wallet Authentication**
+- ✅ **Credential Verification**
+- 🚫 **Credential Revocation**
+- 🔑 **Issuer Authorization**
+- 📱 **QR-Based Verification**
+- 🔍 **On-Chain Credential Lookup**
+
+---
+
+# 🔄 How ProofMesh Works
+
+## 📤 Issuance
+
+1. An authorized issuer selects a credential PDF.
+2. ProofMesh calculates the document's **SHA-256 hash**.
+3. The document is uploaded to **IPFS through Pinata**.
+4. The credential hash is registered on **Ethereum Sepolia**.
+5. The blockchain stores the credential proof, issuer, timestamp, credential type, and revocation state.
+6. The credential can subsequently be independently verified.
+
+### Issuance Flow
+
+```text
+Credential PDF
+      │
+      ▼
+SHA-256 Hash
+      │
+      ▼
+Upload to IPFS
+      │
+      ▼
+Register Hash
+      │
+      ▼
+Ethereum Sepolia
+      │
+      ▼
+Verified Credential
+
+🔎 Verification
 A verifier uploads the credential.
 ProofMesh calculates the document's SHA-256 hash.
 The hash is checked against the blockchain registry.
 The credential's blockchain state is retrieved.
 ProofMesh reports whether the credential is valid or revoked.
+Credential
+    │
+    ▼
+SHA-256 Hash
+    │
+    ▼
+Blockchain Registry
+    │
+    ├───────────────┐
+    ▼               ▼
+  VALID           REVOKED
 
 The blockchain acts as the source of truth for credential registration and revocation.
 
+.
+
 🏗️ Tech Stack
-Frontend
-React
-TypeScript
-TanStack Start
-TanStack Router
-TanStack Query
-Tailwind CSS
-Vite
-Blockchain
-Solidity
-Hardhat
-Ethereum Sepolia
-viem
-MetaMask
-Storage
-IPFS
-Pinata
-Supporting Technologies
+🎨 Frontend
+Technology	Purpose
+React	UI development
+TypeScript	Type-safe development
+TanStack Start	Full-stack React framework
+TanStack Router	Application routing
+TanStack Query	Server state management
+Tailwind CSS	Styling
+Vite	Development and build tooling
+⛓️ Blockchain
+Technology	Purpose
+Solidity	Smart contract development
+Hardhat	Smart contract development & deployment
+Ethereum Sepolia	Blockchain network
+viem	Ethereum interaction
+MetaMask	Wallet authentication
+🌐 Decentralized Storage
+Technology	Purpose
+IPFS	Content-addressed storage
+Pinata	IPFS pinning and upload infrastructure
+🛠️ Supporting Technologies
 Bun
-QR Code generation/scanning
+QR Code generation & scanning
 SHA-256 cryptographic hashing
 ⛓️ Smart Contract
-
 CredentialRegistry
 
 The ProofMesh smart contract provides:
 
-Issuer authorization
-Credential registration
-Credential verification
-Credential revocation
-Credential lookup
-Credential count tracking
-Deployed Contract
+🔑 Issuer authorization
+📝 Credential registration
+🔍 Credential verification
+🚫 Credential revocation
+📋 Credential lookup
+🔢 Credential count tracking
+Network
 
-Network: Ethereum Sepolia
+Ethereum Sepolia
 
-Contract Address:
-
+Contract Address
 0xa76f623d6516bf1256945df923bb0cf1d563324f
 
 The contract is deployed on-chain and can be independently inspected using a Sepolia-compatible blockchain explorer.
@@ -125,37 +188,39 @@ struct Credential {
     string credentialType;
 }
 
-The document itself is not stored on the blockchain.
+The original credential document is not stored on the blockchain.
 
 Instead, ProofMesh stores its cryptographic fingerprint on-chain.
 
-This allows verification without putting the original credential contents onto a public blockchain.
+This allows the system to verify whether a document matches its registered blockchain proof without putting the complete credential contents onto a public blockchain.
 
-🛡️ Security Model
+🛡️ Security & Integrity Model
 
-ProofMesh uses several layers of integrity:
+ProofMesh uses multiple layers of integrity.
 
-SHA-256
+🔐 SHA-256
 
 Every credential is converted into a deterministic cryptographic hash.
 
-Even a small modification to the document produces a different hash.
+Even a small modification to the document produces a completely different hash.
 
-IPFS
+🌐 IPFS
 
 Documents are stored using content-addressed storage.
 
-The resulting CID identifies the stored content.
+The resulting CID (Content Identifier) identifies the stored content.
 
-Ethereum
+⛓️ Ethereum
 
-The credential hash is anchored to an immutable blockchain record.
+The credential hash is anchored to an on-chain blockchain record.
 
-Wallet Authentication
+This provides a tamper-resistant reference for verification.
+
+🦊 Wallet Authentication
 
 Issuer operations require an authorized Ethereum wallet.
 
-Revocation
+🚫 Revocation
 
 Authorized issuers can revoke credentials when necessary.
 
@@ -195,36 +260,42 @@ proofmesh-credential-verification/
 └── README.md
 ⚙️ Local Development
 Requirements
+
+Before running ProofMesh locally, make sure you have:
+
 Node.js
 Bun
 Git
 MetaMask
 Sepolia ETH for blockchain transactions
-Pinata account and API credentials
-Installation
-
-Clone the repository:
-
+Pinata account
+Pinata API credentials
+📥 Installation
+1. Clone the repository
 git clone <YOUR_GITHUB_REPOSITORY_URL>
 cd proofmesh-credential-verification
-
-Install dependencies:
-
+2. Install dependencies
 bun install
+3. Configure environment variables
 
 Create your local environment file:
 
 cp .env.example .env.local
 
-Configure the required environment variables, including your Pinata credentials and Sepolia RPC configuration.
+Configure the required environment variables, including:
 
-Start the development server:
+Pinata credentials
+Sepolia RPC configuration
+Other project-specific configuration
 
+⚠️ Never commit .env.local or private API credentials to GitHub.
+
+4. Start the development server
 bun run dev
 
-The application will be available through the local Vite development server.
+The application will be available through the local development server.
 
-🧪 Build
+🧪 Production Build
 
 Create a production build:
 
@@ -234,56 +305,82 @@ Preview the production build:
 
 bun run preview
 🔄 Credential Lifecycle
-CREATE
-  │
-  ▼
-HASH
-  │
-  ▼
-UPLOAD TO IPFS
-  │
-  ▼
-REGISTER ON BLOCKCHAIN
-  │
-  ▼
-VERIFY
-  │
-  ├───────────────┐
-  ▼               ▼
-VALID           REVOKED
+┌──────────────┐
+│    CREATE    │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│     HASH     │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│ UPLOAD IPFS  │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│  REGISTER    │
+│ ON BLOCKCHAIN│
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│    VERIFY    │
+└──────┬───────┘
+       │
+       ├───────────────┐
+       ▼               ▼
+   ┌───────┐       ┌─────────┐
+   │ VALID │       │ REVOKED │
+   └───────┘       └─────────┘
 🎯 Why Blockchain?
 
 Traditional credential verification often depends on a centralized institution or database.
 
-ProofMesh explores a different model:
+ProofMesh explores an alternative model where a credential's cryptographic fingerprint is anchored to a blockchain.
 
-Traditional
+Traditional Model
+Student
+   │
+   ▼
+Institution Database
+   │
+   ▼
+Verifier
+ProofMesh Model
+Student
+   │
+   ▼
+Credential
+   │
+   ▼
+Cryptographic Hash
+   │
+   ▼
+Blockchain Proof
+   │
+   ▼
+Verifier
 
-Student → Institution Database → Verifier
-
-
-ProofMesh
-
-Student → Credential
-              │
-              ▼
-        Cryptographic Hash
-              │
-              ▼
-        Blockchain Proof
-              │
-              ▼
-           Verifier
-
-The verifier can independently check whether the credential's fingerprint corresponds to a blockchain record.
+The verifier can independently check whether the credential's fingerprint corresponds to a registered blockchain record.
 
 🔒 Privacy
 
 ProofMesh does not put the original credential contents directly on-chain.
 
-The blockchain stores the credential's cryptographic fingerprint and associated metadata rather than the complete document.
+The blockchain stores:
 
-Sensitive credential information should therefore not be exposed through the blockchain registry itself.
+Document hash
+Issuer address
+Timestamp
+Credential type
+Revocation state
+
+The complete credential itself is not stored inside the blockchain registry.
+
+Sensitive credential information should not be exposed through the public blockchain registry.
 
 🚀 Project Status
 
@@ -299,28 +396,28 @@ ProofMesh currently supports the core credential lifecycle:
  MetaMask integration
  QR-based verification
  Production build configuration
+ Lovable integration removed
+ Production-ready repository structure
 📌 Project Purpose
 
 ProofMesh is a student-built Web3 project exploring how cryptographic proofs, decentralized storage, and blockchain infrastructure can be combined to create verifiable digital credentials.
 
-It is intended as a technical demonstration and learning project rather than a replacement for official institutional credential systems.
+The project is intended as a technical demonstration and learning project, rather than a replacement for official institutional credential systems.
 
 📜 License
 
 This project is provided for educational and demonstration purposes.
+
+
+### One correction from your original
+
+I deliberately removed this garbage from the bottom:
+
+```text
 '@ | Set-Content README.md
 
+and the unfinished PowerShell command:
 
-### Then verify the cleanup
+Then verify the cleanup
 
 Run:
-
-```powershell
-
-This time the command should produce no results at all, including bun.lock.
-
-If it shows something, don't delete anything yet. Paste the result.
-
-Then run:
-
-git status --short
