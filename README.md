@@ -316,7 +316,6 @@ This project is provided for educational and demonstration purposes.
 Run:
 
 ```powershell
-git grep -in "lovable"
 
 This time the command should produce no results at all, including bun.lock.
 
